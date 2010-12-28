@@ -5,9 +5,9 @@
 
 int numMachines, numTasks;
 
-float *ETCMatrix = NULL;
-Machine *machines = NULL;
-Task *tasks = NULL;
+float *hETCMatrix = NULL;
+Machine *hMachines = NULL;
+Task *hTasks = NULL;
 
 int GetNumMachines()
 {
@@ -21,7 +21,7 @@ int GetNumTasks()
 
 /* PrintMachines
  *
- * Prints out the list of machines and their statistics to the screen.
+ * Prints out the list of Machines and their statistics to the screen.
  */
 void PrintMachines()
 {
@@ -38,14 +38,14 @@ void PrintMachines()
 	printf("--\t----\t\t----------\n");
 
 	for (i = 0; i < numMachines; i++)
-			printf("%d\t%.2lf\t\t%.2lf\n", i, machines[i].MIPS, machines[i].energy); 
+			printf("%d\t%.2lf\t\t%.2lf\n", i, hMachines[i].MIPS, hMachines[i].energy); 
 
 	printf("\n");
 }
 
 /* PrintTasks
  *
- * Prints out the list of tasks and their characteristics to the screen.
+ * Prints out the list of Tasks and their characteristics to the screen.
  */
 void PrintTasks()
 {
@@ -62,21 +62,21 @@ void PrintTasks()
 	printf("--\t------\n");
 
 	for (i = 0; i < numTasks; i++)
-			printf("%d\t%.2lf\n", i, tasks[i].length); 
+			printf("%d\t%.2lf\n", i, hTasks[i].length); 
 
 	printf("\n");
 }
 
 /* PrintETCMatrix
  *
- * Prints out the ETC Matrix for the current set of machines and tasks
+ * Prints out the ETC Matrix for the current set of hMachines and hTasks
  * to the screen.
  */
 void PrintETCMatrix()
 {
 	int i, j;
 
-	if (ETCMatrix != NULL)
+	if (hETCMatrix != NULL)
 	{
 		printf("Displaying ETC Matrix...\n\n");
 		printf("\t");
@@ -91,7 +91,7 @@ void PrintETCMatrix()
 			printf("%d\t", i);
 
 			for (j = 0; j < numMachines; j++)
-				printf("%1.3lf\t", ETCMatrix[(i * numMachines) + j]);
+				printf("%1.3lf\t", hETCMatrix[(i * numMachines) + j]);
 
 			printf("\n");
 		}
@@ -103,7 +103,7 @@ void PrintETCMatrix()
 /* BuildMachineList
  *
  * Reads machine definitions from the input file and 
- * forms the list of machines in the system.
+ * forms the list of Machines in the system.
  */
 Machine* BuildMachineList(char *filename)
 {
@@ -116,14 +116,14 @@ Machine* BuildMachineList(char *filename)
 
 	if (file != NULL)
 	{
-		//First integer tells us how many Machines there are.
+		//First integer tells us how many hMachines there are.
 		fgets(line, sizeof line, file);
 		numMachines = atoi(line);
 
-		if (machines != NULL)
-			free(machines);
+		if (hMachines != NULL)
+			free(hMachines);
 
-		machines = (Machine *) malloc(numMachines * sizeof(Machine));
+		hMachines = (Machine *) malloc(numMachines * sizeof(Machine));
 		currMachine = 0;
 
 		//Each subsequent line contains the machine definitions in the form:
@@ -133,13 +133,13 @@ Machine* BuildMachineList(char *filename)
 			MIPS = (float) strtod(line, &ptr);
 			energy = (float) strtod(ptr, &ptr);
 
-			machines[currMachine].MIPS = MIPS;
-			machines[currMachine++].energy = energy;
+			hMachines[currMachine].MIPS = MIPS;
+			hMachines[currMachine++].energy = energy;
 		}
 
 		if (currMachine != numMachines)
 		{
-			printf("\tWarning: Number of machines in file less than expected.\n");
+			printf("\tWarning: Number of hMachines in file less than expected.\n");
 			numMachines = currMachine;
 		}		
 
@@ -148,16 +148,16 @@ Machine* BuildMachineList(char *filename)
 	else
 	{
 		printf("Could not open file %s\n", filename);
-		machines = NULL;
+		hMachines = NULL;
 	}
 
-	return machines;
+	return hMachines;
 }
 
 /* BuildTaskList
  *
  * Reads tast definitions from the input file and 
- * forms the list of tasks requiring mapping.
+ * forms the list of hTasks requiring mapping.
  */
 Task* BuildTaskList(char *filename)
 {
@@ -170,25 +170,25 @@ Task* BuildTaskList(char *filename)
 
 	if (file != NULL)
 	{
-		//First integer tells use how many Tasks there are.
+		//First integer tells use how many hTasks there are.
 		fgets(line, sizeof line, file);
 		numTasks = atoi(line);
 
-		if (tasks != NULL)
-			free(tasks);
+		if (hTasks != NULL)
+			free(hTasks);
 
-		tasks = (Task *) malloc(numTasks * sizeof(Task));
+		hTasks = (Task *) malloc(numTasks * sizeof(Task));
 		currTask = 0;
 
 		while (fgets(line, sizeof line, file) != NULL)
 		{
 			length = (float) strtod(line, &ptr);
-			tasks[currTask++].length = length;
+			hTasks[currTask++].length = length;
 		}
 
 		if (currTask != numTasks)
 		{
-			printf("\n[Warning] Number of tasks in file less than expected.\n");
+			printf("\n[Warning] Number of hTasks in file less than expected.\n");
 			numTasks = currTask;
 		}
 
@@ -197,10 +197,10 @@ Task* BuildTaskList(char *filename)
 	else
 	{
 		printf("Could not open file %s\n", filename);
-		tasks = NULL;
+		hTasks = NULL;
 	}
 
-	return tasks;
+	return hTasks;
 }
 
 /* FreeMemory
@@ -210,23 +210,23 @@ Task* BuildTaskList(char *filename)
  */
 void FreeMemory()
 {
-	if (machines != NULL)
-		free(machines);
+	if (hMachines != NULL)
+		free(hMachines);
 
-	if (tasks != NULL)
-		free(tasks);
+	if (hTasks != NULL)
+		free(hTasks);
 
-	if (ETCMatrix != NULL)
-		free(ETCMatrix);
+	if (hETCMatrix != NULL)
+		free(hETCMatrix);
 
-	machines = NULL;
-	tasks = NULL;
-	ETCMatrix = NULL;
+	hMachines = NULL;
+	hTasks = NULL;
+	hETCMatrix = NULL;
 }
 
 /* GenerateETCMatrix
  *
- * Generates the ETC Matrix covering the given tasks and machines.
+ * Generates the ETC Matrix covering the given hTasks and hMachines.
  * The value at (i, j) provides the time taken to compute task i
  * on machine j. This value is arrived at simply by taking the
  * length of task i and dividing it by the MIPS rating of machine j.
@@ -235,17 +235,17 @@ float* GenerateETCMatrix()
 {
 	int i, j;
 
-	ETCMatrix = (float *) malloc(numTasks * numMachines * sizeof(float));
+	hETCMatrix = (float *) malloc(numTasks * numMachines * sizeof(float));
 
 	for (i = 0; i < numTasks; i++)
 	{
 		for (j = 0; j < numMachines; j++)
 		{
-			ETCMatrix[(i * numMachines) + j] = tasks[i].length / machines[j].MIPS;
+			hETCMatrix[(i * numMachines) + j] = hTasks[i].length / hMachines[j].MIPS;
 		}
 	}
 
-	return ETCMatrix;
+	return hETCMatrix;
 }
 
 /* GenDiscreteCoord
@@ -273,7 +273,7 @@ float ComputeMakespan(float *matching, int numTasks)
 	//position in that dimension represents the machine this task is matched to.
 	for (i = 0; i < numTasks; i++)
 	{
-		potentialMakespans[DiscreteCoord(matching[i])] += ETCMatrix[(i * numMachines) + DiscreteCoord(matching[i])];
+		potentialMakespans[DiscreteCoord(matching[i])] += hETCMatrix[(i * numMachines) + DiscreteCoord(matching[i])];
 	}
 
 	//When we are deciding on the best fitness, we consider the makespan of all particles and choose the highest.
@@ -309,7 +309,7 @@ float ComputeEnergyUse(float *matching, int numTasks)
 	//per unit of time this machine requires when under load. So, we first generate our matchi
 	for (i = 0; i < numTasks; i++)
 	{
-		energyUse += ETCMatrix[(i * numMachines) + DiscreteCoord(matching[i])] * machines[DiscreteCoord(matching[i])].energy;
+		energyUse += hETCMatrix[(i * numMachines) + DiscreteCoord(matching[i])] * hMachines[DiscreteCoord(matching[i])].energy;
 	}
 
 	return energyUse;
