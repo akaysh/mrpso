@@ -358,12 +358,28 @@
 				RelativePath=".\mrpso_gpu.cu"
 				>
 			</File>
+			<Filter
+				Name="CPU"
+				>
+				<File
+					RelativePath=".\cpu_swarm_functions.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\mrpso_cpu.cu"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\cpu_pso.h"
+				>
+			</File>
 			<File
 				RelativePath=".\helper.h"
 				>
@@ -376,11 +392,15 @@
 			>
 		</Filter>
 		<File
-			RelativePath=".\ReadMe.txt"
+			RelativePath=".\machines8.txt"
 			>
 		</File>
 		<File
 			RelativePath=".\sample.cu"
+			>
+		</File>
+		<File
+			RelativePath=".\tasks80.txt"
 			>
 		</File>
 	</Files>
