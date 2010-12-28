@@ -22,6 +22,16 @@ typedef struct
 	float *velocityVector;		//The current velocity of this Particle in each dimension.
 } Particle;
 
+/* Swarm
+ *
+ * A Swarm is composed of a series of Particles as well as a global best position/value.
+ */
+typedef struct 
+{
+	Particle *particles;		//The array of Particles composing this swarm.
+	float gBest;				//The fitness of the global best position.
+	float *gBestPositionVector; //The actual global best position for this swarm.
+} Swarm;
 
 /* Task
  *
@@ -43,22 +53,22 @@ typedef struct
 	float energy;		//Amount of energy used by this Machine every unit of time.
 } Machine;
 
-extern float *ETCMatrix;
-extern Machine *machines;
-extern Task *tasks;
+extern float *hETCMatrix;
+extern Machine *hMachines;
+extern Task *hTasks;
 
 Machine* BuildMachineList(char *filename);
 Task* BuildTaskList(char *filename);
-float* GenerateETCMatrix();
+float* GeneratehETCMatrix();
 
 void FreeMemory();
 
-void PrintETCMatrix();
-void PrintMachines();
-void PrintTasks();
+void PrinthETCMatrix();
+void PrinthMachines();
+void PrinthTasks();
 
-int GetNumMachines();
-int GetNumTasks();
+int GetnumMachines();
+int GetnumTasks();
 
 float ComputeMakespan(float *matching, int numTasks);
 float ComputeEnergyUse(float *matching, int numTasks);

@@ -354,6 +354,10 @@
 				RelativePath=".\helper.cu"
 				>
 			</File>
+			<File
+				RelativePath=".\mrpso_gpu.cu"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
