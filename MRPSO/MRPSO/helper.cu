@@ -9,6 +9,67 @@ float *hETCMatrix = NULL;
 Machine *hMachines = NULL;
 Task *hTasks = NULL;
 
+FILE *runsFile;
+
+int OpenRunsFile(char *filename)
+{
+	runsFile = fopen(filename, "r");
+	
+	return runsFile == NULL ? 0 : 1;
+}
+
+RunConfiguration LoadRunConfig(char *line)
+{
+	RunConfiguration run;
+
+	if (line != NULL)
+	{
+		sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d", &run.taskFile, &run.machineFile, &run.numSwarms, &run.numParticles, 
+			   &run.numIterations, &run.w, &run.wDecay, &run.c1, &run.c2, &run.iterationsBeforeSwap, &run.numParticlesToSwap);
+	}
+
+	return run;
+}
+
+RunConfiguration GetNextRun()
+{
+	int done = 0;
+	RunConfiguration run;
+	char line[512];
+
+	FreeCPUMemory();
+
+	if (runsFile != NULL)
+	{
+		while (!done && fgets(line, sizeof line, runsFile) != NULL)
+		{
+			if (line[0] != '#')
+				done = true;
+		}
+
+		if (!done && feof(runsFile))
+			run.numSwarms = -1;
+		else
+		{
+			run = LoadRunConfig(line);
+
+			BuildMachineList(run.machineFile);
+			BuildTaskList(run.taskFile);
+			GenerateETCMatrix();
+		}
+	}
+	else
+		run.numSwarms = -1;
+
+	return run;
+}
+
+void CloseRunsFile()
+{
+	if (runsFile != NULL)
+		fclose(runsFile);
+}
+
 int GetNumMachines()
 {
 	return numMachines;
@@ -203,12 +264,12 @@ Task* BuildTaskList(char *filename)
 	return hTasks;
 }
 
-/* FreeMemory
+/* FreeCPUMemory
  *
  * Frees the memory allocated by building the Machine and Task
  * lists as well as the ETC Matrix.
  */
-void FreeMemory()
+void FreeCPUMemory()
 {
 	if (hMachines != NULL)
 		free(hMachines);

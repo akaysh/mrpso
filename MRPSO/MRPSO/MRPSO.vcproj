@@ -362,6 +362,14 @@
 				Name="CPU"
 				>
 				<File
+					RelativePath=".\cpu_makespan_perf_test.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\cpu_makespan_pso_driver.cu"
+					>
+				</File>
+				<File
 					RelativePath=".\cpu_swarm_functions.cu"
 					>
 				</File>
@@ -384,6 +392,10 @@
 				RelativePath=".\helper.h"
 				>
 			</File>
+			<File
+				RelativePath=".\tests.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
@@ -396,7 +408,11 @@
 			>
 		</File>
 		<File
-			RelativePath=".\sample.cu"
+			RelativePath=".\main.cu"
+			>
+		</File>
+		<File
+			RelativePath=".\runs.txt"
 			>
 		</File>
 		<File
