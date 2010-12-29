@@ -53,22 +53,48 @@ typedef struct
 	float energy;		//Amount of energy used by this Machine every unit of time.
 } Machine;
 
+
+
+/* RunConfiguration
+ *
+ * A structure for storing the configuration required for a single run of
+ * the PSO algorithm.
+ */
+typedef struct  
+{
+	char taskFile[512];			//The file containing task definitions.
+	char machineFile[512];		//The file containing machine definitions.
+	int numSwarms;				//The number of swarms to use for a given objective.
+	int numParticles;			//The number of particles per swarm.
+	int numIterations;			//The total number of iterations.
+	int iterationsBeforeSwap;	//The number of iterations before swarms communicate with one another.
+	int numParticlesToSwap;		//The number of particles to swap between swarms when communicating.
+	float w;					//The inertial weight parameter.
+	float wDecay;				//The amount of decay in w at each iteration.
+	float c1;					//The local perturbation parameter.
+	float c2;					//The global perturbation parameter.
+} RunConfiguration;
+
 extern float *hETCMatrix;
 extern Machine *hMachines;
 extern Task *hTasks;
 
+int OpenRunsFile(char *filename);
+RunConfiguration GetNextRun();
+void CloseRunsFile();
+
 Machine* BuildMachineList(char *filename);
 Task* BuildTaskList(char *filename);
-float* GeneratehETCMatrix();
+float* GenerateETCMatrix();
 
-void FreeMemory();
+void FreeCPUMemory();
 
 void PrinthETCMatrix();
 void PrinthMachines();
 void PrinthTasks();
 
-int GetnumMachines();
-int GetnumTasks();
+int GetNumMachines();
+int GetNumTasks();
 
 float ComputeMakespan(float *matching, int numTasks);
 float ComputeEnergyUse(float *matching, int numTasks);
