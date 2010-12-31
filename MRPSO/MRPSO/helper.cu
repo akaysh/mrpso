@@ -10,6 +10,8 @@ Machine *hMachines = NULL;
 Task *hTasks = NULL;
 
 FILE *runsFile;
+RunConfiguration *run = NULL;
+
 
 int OpenRunsFile(char *filename)
 {
@@ -18,23 +20,20 @@ int OpenRunsFile(char *filename)
 	return runsFile == NULL ? 0 : 1;
 }
 
-RunConfiguration LoadRunConfig(char *line)
+RunConfiguration *LoadRunConfig(char *line)
 {
-	RunConfiguration run;
-
 	if (line != NULL)
 	{
-		sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d", &run.taskFile, &run.machineFile, &run.numSwarms, &run.numParticles, 
-			   &run.numIterations, &run.w, &run.wDecay, &run.c1, &run.c2, &run.iterationsBeforeSwap, &run.numParticlesToSwap);
+		sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d", &run->taskFile, &run->machineFile, &run->numSwarms, &run->numParticles, 
+			   &run->numIterations, &run->w, &run->wDecay, &run->c1, &run->c2, &run->iterationsBeforeSwap, &run->numParticlesToSwap);
 	}
 
 	return run;
 }
 
-RunConfiguration GetNextRun()
+RunConfiguration *GetNextRun()
 {
 	int done = 0;
-	RunConfiguration run;
 	char line[512];
 
 	FreeCPUMemory();
@@ -47,19 +46,37 @@ RunConfiguration GetNextRun()
 				done = true;
 		}
 
+		if (run != NULL)
+		{
+			free(run);
+			run = NULL;
+		}
+
+		run = (RunConfiguration *) malloc(sizeof(RunConfiguration));
+
 		if (!done && feof(runsFile))
-			run.numSwarms = -1;
+		{
+			if (run != NULL)
+			{
+				free(run);
+				run = NULL;
+			}
+		}
 		else
 		{
-			run = LoadRunConfig(line);
+			LoadRunConfig(line);
 
-			BuildMachineList(run.machineFile);
-			BuildTaskList(run.taskFile);
+			BuildMachineList(run->machineFile);
+			BuildTaskList(run->taskFile);
 			GenerateETCMatrix();
 		}
 	}
 	else
-		run.numSwarms = -1;
+		if (run != NULL)
+		{
+			free(run);
+			run = NULL;
+		}
 
 	return run;
 }
