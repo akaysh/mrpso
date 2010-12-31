@@ -9,21 +9,21 @@
 
 #define NUM_TESTS 20
 
-void TestMakespan(FILE *outFile, RunConfiguration run)
+void TestMakespan(FILE *outFile, RunConfiguration *run)
 {
 	int i, j;
 	float *iterationGBestC, *currIterationC = NULL;
 
-	iterationGBestC = (float *) calloc(run.numIterations * 2, sizeof(float));
+	iterationGBestC = (float *) calloc(run->numIterations * 2, sizeof(float));
 
 	if (hMachines != NULL && hTasks != NULL)
 	{
 		for (i = 0; i < NUM_TESTS; i++)
 		{
-			currIterationC = RunMakespanPSO(run.numParticles, GetNumTasks(), GetNumMachines(), run.w, run.wDecay, run.c1, run.c2, run.numIterations, BASIC);
+			currIterationC = RunMakespanPSO(run->numParticles, GetNumTasks(), GetNumMachines(), run->w, run->wDecay, run->c1, run->c2, run->numIterations, BASIC);
 
 			//Add the current iteration values to the running totals.
-			for (j = 0; j < run.numIterations; j++)
+			for (j = 0; j < run->numIterations; j++)
 			{
 				iterationGBestC[j * 2] += currIterationC[j * 2];
 				iterationGBestC[j * 2 + 1] += currIterationC[j * 2 + 1];
@@ -38,11 +38,11 @@ void TestMakespan(FILE *outFile, RunConfiguration run)
 		printf("\n");
 
 		//Average the iteration results and write it all out to the output file
-		for (i = 0; i < run.numIterations; i++)
+		for (i = 0; i < run->numIterations; i++)
 		{
 			iterationGBestC[i * 2] /= (float) NUM_TESTS;
 			iterationGBestC[i * 2 + 1] /= (float) NUM_TESTS;
-			fprintf(outFile, "%s,%s,%d,%.8f,%.8f\n", run.taskFile, run.machineFile, i, iterationGBestC[i * 2], iterationGBestC[i * 2 + 1]);
+			fprintf(outFile, "%s,%s,%d,%.8f,%.8f\n", run->taskFile, run->machineFile, i, iterationGBestC[i * 2], iterationGBestC[i * 2 + 1]);
 		}
 
 		free(iterationGBestC);
@@ -55,7 +55,7 @@ void TestMakespanResults(char *filename)
 	int i;
 	int opened;
 	FILE *outFile;
-	RunConfiguration run;
+	RunConfiguration *run;
 
 	opened = OpenRunsFile(filename);
 
@@ -70,7 +70,7 @@ void TestMakespanResults(char *filename)
 			fprintf(outFile, "task_file,machine_file,iteration,gbest,energy\n");
 			run = GetNextRun();
 
-			while (run.numSwarms >= 0)
+			while (run->numSwarms >= 0)
 			{
 				TestMakespan(outFile, run);
 

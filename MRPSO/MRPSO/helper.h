@@ -1,6 +1,10 @@
 #ifndef _HELPER_PSO_H_
 #define _HELPER_PSO_H_
 
+#define RECORD_VALUES
+
+#include <cuda_runtime.h>
+
 typedef enum VELOCITY_UPDATE_STYLE
 {
 	BASIC,		//Continuous PSO
@@ -80,7 +84,7 @@ extern Machine *hMachines;
 extern Task *hTasks;
 
 int OpenRunsFile(char *filename);
-RunConfiguration GetNextRun();
+RunConfiguration *GetNextRun();
 void CloseRunsFile();
 
 Machine* BuildMachineList(char *filename);
