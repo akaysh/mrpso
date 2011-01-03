@@ -1,8 +1,3 @@
-/* Contains all the tests for measuring
- * the performance of the Makespan, Energy,
- * and Hybrid (VE) PSO implementations
- */
-
 #include "cpu_pso.h"
 #include "tests.h"
 #include "helper.h"

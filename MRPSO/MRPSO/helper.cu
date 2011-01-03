@@ -393,3 +393,56 @@ float ComputeEnergyUse(float *matching, int numTasks)
 	return energyUse;
 }
 
+int CalcNumBlocks(int numThreads, int threadsPerBlock)
+{
+	int numBlocks;
+
+	if (numThreads % threadsPerBlock == 0)
+		numBlocks = numThreads / threadsPerBlock;
+	else
+		numBlocks = (numThreads / threadsPerBlock) + 1;
+	numBlocks = numBlocks == 0 ? 1 : numBlocks;
+
+	return numBlocks;
+}
+
+#if __DEVICE_EMULATION__
+
+bool InitCUDA() { return true; }
+
+#else
+bool InitCUDA()
+{
+	int count = 0;
+	int i = 0;
+
+	cudaGetDeviceCount(&count);
+	if(count == 0) 
+	{
+		fprintf(stderr, "A CUDA-capable device was not detected.\n");
+		return false;
+	}
+
+	for(i = 0; i < count; i++) 
+	{
+		cudaDeviceProp prop;
+		if(cudaGetDeviceProperties(&prop, i) == cudaSuccess) 
+		{
+			if(prop.major >= 1) 
+				break;			
+		}
+	}
+
+	if(i == count) 
+	{
+		fprintf(stderr, "A CUDA-capable device was not detected.\n");
+		return false;
+	}
+
+	cudaSetDevice(i);
+
+	printf("CUDA initialized.\n");
+	return true;
+}
+#endif
+

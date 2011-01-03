@@ -187,6 +187,7 @@
 		</Configuration>
 		<Configuration
 			Name="EmuDebug|x64"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2"
@@ -378,6 +379,14 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="Tests"
+				>
+				<File
+					RelativePath=".\gpu_correctness_tests.cu"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -386,6 +395,10 @@
 			>
 			<File
 				RelativePath=".\cpu_pso.h"
+				>
+			</File>
+			<File
+				RelativePath=".\gpu_pso.h"
 				>
 			</File>
 			<File
