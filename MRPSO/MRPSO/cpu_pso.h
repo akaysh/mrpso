@@ -14,7 +14,6 @@ void UpdatePositionBasic(Particle *particle, int numTasks, int numMachines);
 
 void InitializeSwarm(Particle *particles, int numParticles, int numTasks, int numMachines);
 void FindGlobalBest(Particle *particles, int numParticles, float *currGBest, float *gBestPositionVector, int numTasks);
-int GenDiscreteCoord(float value);
 
 void UpdatePositionsBasic(Particle *particles, int numParticles, int numTasks, int numMachines);
 void UpdatePositionsDiscrete(Particle *particles, int numParticles, int numTasks, float w, float *gBestPositionVector);
