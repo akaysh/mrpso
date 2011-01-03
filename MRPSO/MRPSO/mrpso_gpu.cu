@@ -2,31 +2,31 @@
 #include <cuda_runtime.h>
 #include "helper.h"
 
-texture<float, 2, cudaReadModeElementType> TexETCMatrix;
-
-__device__ int GetDiscreteCoord(float val)
-{
-	return (int) rintf(val);
-}
+texture<float, 2, cudaReadModeElementType> texETCMatrix;
 
 __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, float *scratch)
 {
 	int i;
 	float makespan;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-
+	int taskOffset, machineOffset;
+	float val;
+	
 	makespan = 0.0f;
+	taskOffset = __mul24(threadID, numTasks);
+	machineOffset = __mul24(threadID, numMachines);
 
 	//Clear our scratch table
 	for (i = 0; i < numTasks; i++)
-		scratch[(threadID * numMachines) + GetDiscreteCoord(matching[threadID * numTasks + i])] = 0.0f;
+		scratch[machineOffset + (int) floorf(matching[taskOffset + i])] = 0.0f;
 
 	for (i = 0; i < numTasks; i++)
 	{
-		scratch[(threadID * numMachines) + GetDiscreteCoord(matching[threadID * numTasks + i])] += tex2D(TexETCMatrix, GetDiscreteCoord(matching[threadID * numTasks + i]), i);
+		scratch[machineOffset + (int) floorf(matching[taskOffset + i])] += tex2D(texETCMatrix, matching[taskOffset + i], (float) i);
+		val = scratch[machineOffset + (int) floorf(matching[taskOffset + i])];
 
-		if (scratch[(threadID * numMachines) + GetDiscreteCoord(matching[threadID * numTasks + i])] > makespan)
-			makespan = scratch[(threadID * numMachines) + GetDiscreteCoord(matching[threadID * numTasks + i])];
+		if (val > makespan)
+			makespan = val;
 	}	
 
 	return makespan;
@@ -39,7 +39,7 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int *swapIndi
 
 }
 
-__global__ void RunIteration(int numSwarms, int numParticles, float *ETCMatrix, float *position, float *velocity, float *pBest, float *pBestPosition, float *gBest, float *gBestPosition)
+__global__ void RunIteration(int numSwarms, int numParticles, float *position, float *velocity, float *pBest, float *pBestPosition, float *gBest, float *gBestPosition)
 {
 	extern __shared__ float sharedPBest[]; //Local best positions are stored in shared memory 
 										   //and dumped to global memory at the end of execution of this kernel.

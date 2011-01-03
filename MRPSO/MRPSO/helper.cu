@@ -326,13 +326,13 @@ float* GenerateETCMatrix()
 	return hETCMatrix;
 }
 
-/* GenDiscreteCoord
+/* DiscreteCoord
  *
  * Generates a discrete coordinate from a continuous coordinate.
  */
 int DiscreteCoord(float value)
 {
-	return (int) floor(value + 0.5);
+	return (int) floor(value);
 }
 
 /* ComputeMakespan

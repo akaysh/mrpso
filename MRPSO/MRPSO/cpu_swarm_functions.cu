@@ -98,7 +98,7 @@ float UpdateFitnessEnergy(Particle *particle, int numTasks, int numMachines)
 	//per unit of time this machine requires when under load. So, we first generate our matchi
 	for (i = 0; i < numTasks; i++)
 	{
-		energyUse += hETCMatrix[(i * numMachines) + GenDiscreteCoord(particle->positionVector[i])] * hMachines[GenDiscreteCoord(particle->positionVector[i])].energy;
+		energyUse += hETCMatrix[(i * numMachines) + DiscreteCoord(particle->positionVector[i])] * hMachines[DiscreteCoord(particle->positionVector[i])].energy;
 	}
 
 	particle->fitness = energyUse;
@@ -132,7 +132,7 @@ float UpdateFitnessMakespan(Particle *particle, int numTasks, int numMachines)
 	//position in that dimension represents the machine this task is matched to.
 	for (i = 0; i < numTasks; i++)
 	{
-		matching[GenDiscreteCoord(particle->positionVector[i])] += hETCMatrix[(i * numMachines) + GenDiscreteCoord(particle->positionVector[i])];
+		matching[DiscreteCoord(particle->positionVector[i])] += hETCMatrix[(i * numMachines) + DiscreteCoord(particle->positionVector[i])];
 	}
 
 	//When we are deciding on the best fitness, we consider the makespan of all particles and choose the highest.
@@ -214,15 +214,6 @@ void FindGlobalBest(Particle *particles, int numParticles, float *currGBest, flo
 		for (i = 0; i < numTasks; i++)
 			gBestPositionVector[i] = particles[particleIndex].pBestPositionVector[i];
 	}
-}
-
-/* GenDiscreteCoord
- *
- * Generates a discrete coordinate from a continuous coordinate.
- */
-int GenDiscreteCoord(float value)
-{
-	return (int) floor(value + 0.5);
 }
 
 

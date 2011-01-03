@@ -100,6 +100,8 @@ void PrintTasks();
 int GetNumMachines();
 int GetNumTasks();
 
+int DiscreteCoord(float value);
+
 float ComputeMakespan(float *matching, int numTasks);
 float ComputeEnergyUse(float *matching, int numTasks);
 
