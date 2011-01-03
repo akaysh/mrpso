@@ -19,4 +19,6 @@ int TestFitnessSameMachines();
 
 void TestMakespanResults(char *filename);
 
+void RunGPUCorrectnessTests();
+
 #endif

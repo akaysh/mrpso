@@ -93,14 +93,17 @@ float* GenerateETCMatrix();
 
 void FreeCPUMemory();
 
-void PrinthETCMatrix();
-void PrinthMachines();
-void PrinthTasks();
+void PrintETCMatrix();
+void PrintMachines();
+void PrintTasks();
 
 int GetNumMachines();
 int GetNumTasks();
 
 float ComputeMakespan(float *matching, int numTasks);
 float ComputeEnergyUse(float *matching, int numTasks);
+
+int CalcNumBlocks(int numThreads, int threadsPerBlock);
+bool InitCUDA();
 
 #endif
