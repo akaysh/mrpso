@@ -26,6 +26,8 @@ typedef struct
 	float *velocityVector;		//The current velocity of this Particle in each dimension.
 } Particle;
 
+typedef float4 ArgStruct;
+
 /* Swarm
  *
  * A Swarm is composed of a series of Particles as well as a global best position/value.

@@ -5,6 +5,7 @@
 #include <math.h>
 #include "tests.h"
 #include "helper.h"
+#include "gpu_pso.h"
 
 texture<float, 2, cudaReadModeElementType> texETCMatrix;
 
@@ -40,6 +41,7 @@ __device__ float CalcMakespanT(int numTasks, int numMachines, float *matching, f
 	float makespan;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	int taskOffset, machineOffset;
+	float matchingVal;
 	float val;
 	
 	makespan = 0.0f;
@@ -52,8 +54,10 @@ __device__ float CalcMakespanT(int numTasks, int numMachines, float *matching, f
 
 	for (i = 0; i < numTasks; i++)
 	{
-		scratch[machineOffset + GetDiscreteCoordT(matching[taskOffset + i])] += tex2D(texETCMatrix, matching[taskOffset + i], (float) i);
-		val = scratch[machineOffset + GetDiscreteCoordT(matching[taskOffset + i])];
+		matchingVal = matching[taskOffset + i];
+
+		scratch[machineOffset + GetDiscreteCoordT(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
+		val = scratch[machineOffset + GetDiscreteCoordT(matchingVal)];
 
 		if (val > makespan)
 			makespan = val;
@@ -75,7 +79,7 @@ __global__ void TestRandTexture(float *dVals, float *dOut, int numTasks, int num
 	int threadID = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (threadID < numTasks)
-		dOut[threadID] = tex2D(texETCMatrix, dVals[threadID] + 0.5f, (float) (threadID));
+		dOut[threadID] = tex2D(texETCMatrix, dVals[threadID], (float) (threadID));
 }
 
 __global__ void TestMakespan(int numTasks, int numMachines, int numMatchings, float *matching, float *scratch, float *outVal)
@@ -173,10 +177,6 @@ int TestTextureReadsRandom()
 	cudaMallocArray(&cuArray, &channelDesc, GetNumMachines(), GetNumTasks());
 	cudaMemcpyToArray(cuArray, 0, 0, hETCMatrix, sizeof(float)*GetNumMachines() *GetNumTasks(), cudaMemcpyHostToDevice);
 	cudaBindTextureToArray(texETCMatrix, cuArray, channelDesc);
-
-	PrintETCMatrix();
-
-	
 
 	for (i = 0; i < GetNumTasks(); i++)
 		hMatching[i] = (float) (rand() % ((GetNumMachines() - 1) * 100)) / 100.0f;
@@ -331,7 +331,6 @@ int TestDiscreteCoord()
 
 	for (i = 0; i < numVals; i++)
 	{
-		printf("%d  %d\n", dInts[i], hInts[i]);
 		if (hInts[i] != dInts[i])
 		{
 			printf("[ERROR] - GPU Int was: %d (expected: %d)\n", dInts[i], hInts[i]);
@@ -340,7 +339,150 @@ int TestDiscreteCoord()
 	}
 
 	PrintTestResults(passed);
+
+	free(hFloats);
+	free(hInts);
+	free(dInts);
+	cudaFree(dFloats);
+	cudaFree(dOut);
 	
+	return passed;
+}
+
+int floatcomp(const void* elem1, const void* elem2)
+{
+    if(*(const float*)elem1 < *(const float*)elem2)
+        return -1;
+    return *(const float*)elem1 > *(const float*)elem2;
+}
+
+
+int TestSwapParticles()
+{
+	int i, j, k;
+	int passed = 1;
+	Particle *particles;
+	float *hPosition, *dPosition, *hVelocity, *dVelocity;
+	int *bestListing;
+	int *worstListing;
+	int *hBestWorst, *dBestWorst;
+	float *fitnesses;
+	int numParticles = 5;
+	int numToSwap = 2;
+	int numSwarms = 2;
+	int numTasks = 10;
+	int numMachines = 4;
+	float currFitness;
+	int index;
+
+	srand((unsigned int) time(NULL));
+
+	hPosition = (float *) calloc(numParticles * numSwarms, sizeof(float));
+	hVelocity = (float *) calloc(numParticles * numSwarms, sizeof(float));
+	bestListing = (int *) calloc(numToSwap * numSwarms, sizeof(int));
+	worstListing = (int *) calloc(numToSwap * numSwarms, sizeof(int));
+	hBestWorst = (int *) calloc(numToSwap * 2 * numSwarms, sizeof(int));
+	fitnesses = (float *) malloc(numParticles * numSwarms * sizeof(float));
+
+	cudaMalloc((void **) &dPosition, numParticles * numSwarms * sizeof(float));
+	cudaMalloc((void **) &dVelocity, numParticles * numSwarms * sizeof(float));
+	cudaMalloc((void **) &dBestWorst, numToSwap * 2 * numSwarms * sizeof(float));
+
+	//Initialize our Particles
+	particles = (Particle *) malloc(numParticles * numSwarms * sizeof(Particle));
+	
+	for (i = 0; i < numParticles * numSwarms; i++)
+	{
+		fitnesses[i] = (rand() % 1000) + 1;
+		particles[i].fitness = fitnesses[i];
+	}
+
+	//Locate the top numToSwap and worst numToSwap Particles in each swarm by qsorting
+	//the fitnesses for each swarm and dumping them into the relevant best/worst listing.
+	for (i = 0; i < numSwarms; i++)
+	{
+		qsort(&fitnesses[numParticles * i], numParticles, sizeof(float), floatcomp);
+
+		index = i * numToSwap;
+
+		for (j = 0; j < numToSwap; j++)
+		{
+			currFitness = fitnesses[i * numParticles + j];			
+
+			//Search for this fitness value in the particles to get the 'real' index.
+			for (k = 0; k < numParticles; k++)
+			{
+				if (abs(particles[i * numParticles + k].fitness - currFitness) < ACCEPTED_DELTA) //Then we found it, mark the index.
+				{
+					bestListing[index++] = k;
+					break;
+				}
+			}
+		}
+
+		index = i * numToSwap;
+
+		for (j = numParticles - numToSwap; j < numParticles; j++)
+		{
+			currFitness = fitnesses[i * numParticles + j];			
+
+			//Search for this fitness value in the particles to get the 'real' index.
+			for (k = 0; k < numParticles; k++)
+			{
+				if (abs(particles[i * numParticles + k].fitness - currFitness) < ACCEPTED_DELTA) //Then we found it, mark the index.
+				{
+					worstListing[index++] = k;
+					break;
+				}
+			}
+		}
+	}
+
+	//Generate some simple values that we can track for the position and velocities...
+	for (i = 0; i < numSwarms; i++)
+	{
+		for (j = 0; j < numParticles; j++)
+		{
+			hPosition[i * numParticles + j] = (float) j;
+			hVelocity[i * numParticles + j] = (float) j;
+		}
+	}
+
+	//Build the correct GPU best/worst listing.
+	//Best_s1  Worst_s1  Best_s2  Worst_s2...
+	for (i = 0; i < numSwarms; i++)
+	{
+		for (j = 0; j < numToSwap; j++)
+			hBestWorst[i * numSwarms * numToSwap + j] = bestListing[i * numSwarms + j];
+
+		for (j; j < numToSwap * 2; j++)
+			hBestWorst[i * numSwarms * numToSwap + j] = worstListing[i * numSwarms + (j - numToSwap)];
+	}
+
+
+	//Copy the memory over to the GPU
+	cudaMemcpy(dPosition, hPosition, numParticles * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dVelocity, hVelocity, numParticles * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dBestWorst, hBestWorst, numToSwap * 2 * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
+
+	SwapBestParticles<<<numSwarms, numParticles>>>(numSwarms, numParticles, numToSwap, dBestWorst, dPosition, dVelocity);
+
+	//Copy the data back
+	cudaMemcpy(hPosition, dPosition, numParticles * numSwarms * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(hVelocity, dVelocity, numParticles * numSwarms * sizeof(float), cudaMemcpyDeviceToHost);
+
+	//Ensure that the correct modified numbers were added.
+	for (i = 0; i < numSwarms; i++)
+	{
+
+
+
+	}
+
+
+
+	PrintTestResults(passed);
+
 	return passed;
 }
 
@@ -348,9 +490,10 @@ int TestDiscreteCoord()
 
 void RunGPUCorrectnessTests()
 {
-	//TestTextureReads();
-	TestGPUMakespan();
+	//TestTextureReads();	
+	//TestTextureReadsRandom();
+	//TestGPUMakespan();
 	//TestDiscreteCoord();
+	TestSwapParticles();
 
-//TestTextureReadsRandom();
 }
