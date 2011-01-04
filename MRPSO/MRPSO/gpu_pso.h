@@ -6,6 +6,6 @@
 void TestTex();
 void TestGPUMatch();
 
-__device__ float CalcMakespan(int numTasks, int numMachines, float *matching, float *scratch);
+__global__ void SwapBestParticles(int numSwarms, int numParticles, int numToSwap, int *swapIndices, float *position, float *velocity);
 
 #endif

@@ -28,4 +28,6 @@ float UpdateFitnessEnergy(Particle *particle, int numTasks, int numMachines);
 void RunMRPSO(RunConfiguration *run);
 float *GetRecordedData();
 
+int CompareParticles(const void *elem1, const void *elem2);
+
 #endif
