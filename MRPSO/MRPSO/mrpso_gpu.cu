@@ -37,13 +37,6 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 	return makespan;
 }
 
-__device__ void UpdateMakespan(int numParticles, int numTasks, int numMachines, float *position, float *scratch)
-{
-
-
-
-}
-
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numToSwap, int *swapIndices, float *position, float *velocity)
 {
 	int i;
@@ -51,8 +44,12 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numToSwap
 	int neighbor;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	float tempPosition, tempVelocity;
+	int mySwarmIndex, neighborSwarmIndex;
 
 	neighbor = blockIdx.x < numSwarms - 1 ? blockIdx.x + 1 : 0;
+
+	mySwarmIndex = blockIdx.x * (numParticles * numToSwap * 2);
+	neighborSwarmIndex = neighbor * (numParticles * numToSwap * 2);
 
 	//swapIndices contains entries in the form:
 	// P1S1_best1, P2S1_best1, ..., P1S1_best2, ...P1S1_worst1, ...PnS1_worstn
@@ -62,7 +59,7 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numToSwap
 		                          //			Swarm index						  Particle best index for iteration
 		bestIndex = swapIndices[ (blockIdx.x * (numParticles * numToSwap * 2)) + ((numParticles * i) + threadIdx.x)];
 
-		worstIndex = swapIndices[(neighbor * (numParticles * numToSwap * 2)) + ((numParticles * i * 2) + threadIdx.x)];
+		worstIndex = swapIndices[(neighbor * (numParticles * numToSwap * 2)) + ((numParticles * i * numToSwap) + threadIdx.x)];
 
 		//Store our velocities (the best values)
 		tempPosition = position[bestIndex];
@@ -96,7 +93,7 @@ __device__ void UpdateVelocityAndPosition(int numParticles, int numTasks, float 
 		
 		newVel *= args.x;
 		lperb = args.z * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2)] * (pBestPosition[offset + i] - currPos);
-		gperb = args.w * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2 + 1)] * (sharedGBestPosition[i] - currPos);
+		gperb = args.w * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2 + 1)] * (gBestPosition[i] - currPos);
 
 		newVel += lperb + gperb;
 		velocity[offset + i] = newVel;
@@ -106,7 +103,8 @@ __device__ void UpdateVelocityAndPosition(int numParticles, int numTasks, float 
 	}
 }
 
-__global__ void RunIterations(int numSwarms, int numParticles, int numTasks, int itersToRun, float *position, float *velocity, float *pBest, float *pBestPosition, float *gBest, float *gBestPosition)
+__global__ void RunIterations(int numSwarms, int numParticles, int numTasks, int itersToRun, float *position, 
+							  float *velocity, float *pBest, float *pBestPosition, float *gBest, float *gBestPosition, float *rands, ArgStruct args)
 {
 	extern __shared__ float sharedPBest[]; //Local best positions are stored in shared memory 
 										   //and dumped to global memory at the end of execution of this kernel.
@@ -125,6 +123,7 @@ __global__ void RunIterations(int numSwarms, int numParticles, int numTasks, int
 	{
 
 		//Update velocity and position
+		UpdateVelocityAndPosition(numParticles, numTasks, velocity, position, pBestPosition, sharedGBestPosition, rands, args);
 
 		//Update fitness
 
