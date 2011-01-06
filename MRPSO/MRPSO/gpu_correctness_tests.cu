@@ -490,10 +490,10 @@ int TestSwapParticles()
 
 void RunGPUCorrectnessTests()
 {
-	//TestTextureReads();	
-	//TestTextureReadsRandom();
-	//TestGPUMakespan();
-	//TestDiscreteCoord();
-	TestSwapParticles();
+	TestTextureReads();	
+	TestTextureReadsRandom();
+	TestGPUMakespan();
+	TestDiscreteCoord();
+	//TestSwapParticles();
 
 }
