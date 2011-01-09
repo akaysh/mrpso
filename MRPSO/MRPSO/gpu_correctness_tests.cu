@@ -365,7 +365,7 @@ int TestSwapParticles()
 	float *hPosition, *dPosition, *hVelocity, *dVelocity;
 	int *bestListing;
 	int *worstListing;
-	int *hBestWorst, *dBestWorst;
+	int *hBestSwapIndices, *hWorstSwapIndices, *dBestSwapIndices, *dWorstSwapIndices;
 	float *fitnesses;
 	int numParticles = 5;
 	int numToSwap = 2;
@@ -381,12 +381,14 @@ int TestSwapParticles()
 	hVelocity = (float *) calloc(numParticles * numSwarms, sizeof(float));
 	bestListing = (int *) calloc(numToSwap * numSwarms, sizeof(int));
 	worstListing = (int *) calloc(numToSwap * numSwarms, sizeof(int));
-	hBestWorst = (int *) calloc(numToSwap * 2 * numSwarms, sizeof(int));
+	hBestSwapIndices = (int *) calloc(numToSwap * numSwarms, sizeof(int));
+	hWorstSwapIndices = (int *) calloc(numToSwap * numSwarms, sizeof(int));
 	fitnesses = (float *) malloc(numParticles * numSwarms * sizeof(float));
 
 	cudaMalloc((void **) &dPosition, numParticles * numSwarms * sizeof(float));
 	cudaMalloc((void **) &dVelocity, numParticles * numSwarms * sizeof(float));
-	cudaMalloc((void **) &dBestWorst, numToSwap * 2 * numSwarms * sizeof(float));
+	cudaMalloc((void **) &dBestSwapIndices, numToSwap * numSwarms * sizeof(int));
+	cudaMalloc((void **) &dWorstSwapIndices, numToSwap * numSwarms * sizeof(int));
 
 	//Initialize our Particles
 	particles = (Particle *) malloc(numParticles * numSwarms * sizeof(Particle));
@@ -448,24 +450,15 @@ int TestSwapParticles()
 		}
 	}
 
-	//Build the correct GPU best/worst listing.
-	//Best_s1  Worst_s1  Best_s2  Worst_s2...
-	for (i = 0; i < numSwarms; i++)
-	{
-		for (j = 0; j < numToSwap; j++)
-			hBestWorst[i * numSwarms * numToSwap + j] = bestListing[i * numSwarms + j];
-
-		for (j; j < numToSwap * 2; j++)
-			hBestWorst[i * numSwarms * numToSwap + j] = worstListing[i * numSwarms + (j - numToSwap)];
-	}
 
 
 	//Copy the memory over to the GPU
 	cudaMemcpy(dPosition, hPosition, numParticles * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(dVelocity, hVelocity, numParticles * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMemcpy(dBestWorst, hBestWorst, numToSwap * 2 * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dBestSwapIndices, bestListing, numToSwap * numSwarms * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(dWorstSwapIndices, worstListing, numToSwap * numSwarms * sizeof(int), cudaMemcpyHostToDevice);
 
-	SwapBestParticles<<<numSwarms, numParticles>>>(numSwarms, numParticles, numToSwap, dBestWorst, dPosition, dVelocity);
+	SwapBestParticles<<<numSwarms, numParticles>>>(numSwarms, numTasks, numToSwap, dBestSwapIndices, dWorstSwapIndices, dPosition, dVelocity);
 
 	//Copy the data back
 	cudaMemcpy(hPosition, dPosition, numParticles * numSwarms * sizeof(float), cudaMemcpyDeviceToHost);

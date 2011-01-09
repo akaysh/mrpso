@@ -6,6 +6,6 @@
 void TestTex();
 void TestGPUMatch();
 
-__global__ void SwapBestParticles(int numSwarms, int numParticles, int numToSwap, int *swapIndices, float *position, float *velocity);
+__global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity);
 
 #endif

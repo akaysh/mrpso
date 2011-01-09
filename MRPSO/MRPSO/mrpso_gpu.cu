@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <cutil.h>
 #include <cuda_runtime.h>
 #include "helper.h"
@@ -38,7 +39,7 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 	return makespan;
 }
 
-__global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, int *swapIndices, float *position, float *velocity)
+__global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
 {
 	int i;
 	int bestIndex, worstIndex;
@@ -49,19 +50,21 @@ __global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, in
 	int mySwarmIndex, neighborSwarmIndex;
 
 	if (threadID < __mul24(numSwarms, numToSwap))
-	{
+	{		
 		//Determine which swarm this thread is covering.
 		mySwarm = threadID / numToSwap;
 		neighbor = mySwarm < numSwarms - 1 ? mySwarm + 1 : 0;
-		mySwarmIndex = __mul24(mySwarm, (numToSwap << 1));
-		neighborSwarmIndex = __mul24(neighbor, (numToSwap << 1));
+		mySwarmIndex = __mul24(mySwarm, numToSwap);
+		neighborSwarmIndex = __mul24(neighbor, numToSwap);
 
 		//The actual index within this swarm is the remainer of threadID / numToSwap
 		myIndex = threadID % numToSwap;	
 
 		//Compute the starting indices for the best and worst locations.
-		bestIndex = swapIndices[mySwarmIndex + myIndex];
-		worstIndex = swapIndices[neighborSwarmIndex + myIndex];
+		bestIndex = bestSwapIndices[mySwarmIndex + myIndex];
+		worstIndex = worstSwapIndices[neighborSwarmIndex + myIndex];
+
+		printf("Particle %i swapping %i with %i", threadID, bestIndex, worstIndex);
 		
 		//Each of our threads that have work to do will swap all of the dimensions of 
 		//one of the 'best' particles for its swarm with the corresponding 'worst'
@@ -83,7 +86,7 @@ __global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, in
 	}
 }
 
-__device__ void UpdateVelocityAndPosition(int numParticles, int numTasks, float *velocity, float *position, float *pBestPosition, 
+__device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numTasks, float *velocity, float *position, float *pBestPosition, 
 										  float *gBestPosition, float *rands, ArgStruct args)
 {
 	//pBest offset is our block's offset + our thread id within the block
@@ -119,14 +122,15 @@ __device__ void UpdateVelocityAndPosition(int numParticles, int numTasks, float 
 	}
 }
 
-__global__ void UpdateVelocity(int numSwarms, int numParticles, int numTasks, float *position, 
-							  float *velocity, float *pBest, float *pBestPosition, float *gBest, float *gBestPosition, float *rands, ArgStruct args)
+__global__ void RunIteration(int numSwarms, int numParticles, int numTasks, float *position, float *velocity, float *pBest, float *pBestPosition, 
+							   float *gBest, float *gBestPosition, float *bestSwap, float *worstSwap, float *rands, ArgStruct args)
 {
 	float fitness; //Fitness values are stored in registers as we do not need these values to persist.
 	int i;
 
 
-	//Update fitness
+	//Update fitness and velocity
+	UpdateVelocityAndPosition(numSwarms, numParticles, numTasks, velocity, position, pBestPosition, gBestPosition, rands, args);
 
 	//Update local best
 
@@ -141,6 +145,14 @@ __global__ void UpdateVelocity(int numSwarms, int numParticles, int numTasks, fl
 
 
 float *MRPSODriver(RunConfiguration *run)
+{
+	int i;
+	float *matching = NULL;
+
+	return matching;
+}
+
+float *MRPSODriverIndividual(RunConfiguration *run)
 {
 	int i;
 	float *matching = NULL;
