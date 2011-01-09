@@ -15,7 +15,7 @@ float *hGBest, *dGBest, *hGBestPosition, *dGBestPosition;
 
 float *dScratch;
 
-float *dSwapIndices;
+int *dBestSwapIndices, *dWorstSwapIndices;
 
 float *hRands, *dRands;
 
@@ -42,7 +42,8 @@ void AllocateGPUMemory(RunConfiguration *run)
 	cudaMalloc((void**) &dPBest, run->numParticles * run->numSwarms * sizeof(float));
 	cudaMalloc((void**) &dPBestPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dScratch, run->numParticles * run->numSwarms * numMachines * sizeof(float));
-	cudaMalloc((void**) &dSwapIndices, run->numSwarms * run->numParticlesToSwap * 2 * sizeof(float));
+	cudaMalloc((void**) &dBestSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
+	cudaMalloc((void**) &dWorstSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
 	cudaMalloc((void**) &dRands, run->numParticles * run->numSwarms *  run->numIterations * 2 * sizeof(float));
 }
 
@@ -59,7 +60,8 @@ void FreeGPUMemory()
 	cudaFree(dPBest);
 	cudaFree(dPBestPosition);
 	cudaFree(dScratch);
-	cudaFree(dSwapIndices);
+	cudaFree(dBestSwapIndices);
+	cudaFree(dWorstSwapIndices);
 	cudaFree(dRands);
 }
 
@@ -77,11 +79,15 @@ void GenerateRandsGPU(RunConfiguration *run)
 	curandGenerateUniform(gen1, dRands, run->numParticles * run->numSwarms * run->numIterations * 2);
 	curandDestroyGenerator(gen1);
 
-	//Reset the stack size to get our memory back.
+	//Reset the stack size to get our memory back on fermi-based GPUs
 	cudaThreadSetLimit(cudaLimitStackSize, 1024);
 }
 
-
+/* OpenRunsFile
+ *
+ * Opens the requested file containing run data.
+ * Returns true if the file was opened, false if otherwise.
+ */
 int OpenRunsFile(char *filename)
 {
 	runsFile = fopen(filename, "r");
@@ -89,6 +95,11 @@ int OpenRunsFile(char *filename)
 	return runsFile == NULL ? 0 : 1;
 }
 
+/* LoadRunConfig
+ *
+ * Loads the run configuration described in the provided line and
+ * returns a RunConfiguration struct populated with the necessary information.
+ */
 RunConfiguration *LoadRunConfig(char *line)
 {
 	if (line != NULL)
@@ -100,6 +111,12 @@ RunConfiguration *LoadRunConfig(char *line)
 	return run;
 }
 
+/* RunConfiguration
+ *
+ * Gets the next run defined in the run file.
+ * Returns NULL if no further runs have been defined or if
+ * the input file has not been opened via OpenRunsFile()
+ */
 RunConfiguration *GetNextRun()
 {
 	int done = 0;
@@ -152,10 +169,21 @@ RunConfiguration *GetNextRun()
 	return run;
 }
 
+/* CloseRunsFile
+ * 
+ * Closes the file containing run definitions if it has
+ * been opened and frees the corresponding memory.
+ */
 void CloseRunsFile()
 {
 	if (runsFile != NULL)
 		fclose(runsFile);
+
+	if (run != NULL)
+	{
+		free(run);
+		run = NULL;
+	}
 }
 
 int GetNumMachines()

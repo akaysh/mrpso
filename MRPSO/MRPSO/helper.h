@@ -122,7 +122,7 @@ extern float *hGBest, *dGBest, *hGBestPosition, *dGBestPosition;
 
 extern float *dScratch;
 
-extern float *dSwapIndices;
+extern int *dBestSwapIndices, *dWorstSwapIndices;
 
 extern float *hRands, *dRands;
 
