@@ -155,8 +155,13 @@ int TestSwapParticles()
 	{
 		for (j = 0; j < numParticles; j++)
 		{
-			hPosition[i * numParticles + j] = (float) j;
-			hVelocity[i * numParticles + j] = (float) j;
+			for (k = 0; k < numTasks; k++)
+			{
+				hPosition[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
+				hVelocity[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
+
+				printf("Writing to value: %d\n", (i * numParticles * numTasks) + j * numTasks + k); 
+			}
 		}
 	}
 
