@@ -1,6 +1,7 @@
 #include <cutil.h>
 #include <cuda_runtime.h>
 #include "helper.h"
+#include "curand.h"
 
 texture<float, 2, cudaReadModeElementType> texETCMatrix;
 
@@ -108,7 +109,7 @@ __device__ void UpdateVelocityAndPosition(int numParticles, int numTasks, float 
 		
 		newVel *= args.x;
 		lperb = args.z * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2)] * (pBestPosition[offset + i] - currPos);
-		gperb = args.w * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2 + 1)] * (gBestPosition[i] - currPos);
+		gperb = args.w * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2 + 1)] * (sharedGBestPosition[i] - currPos);
 
 		newVel += lperb + gperb;
 		velocity[offset + i] = newVel;
@@ -139,9 +140,31 @@ __global__ void UpdateVelocity(int numSwarms, int numParticles, int numTasks, fl
 }
 
 
-float *MRPSODriver()
+float *MRPSODriver(RunConfiguration *run)
 {
+	int i;
 	float *matching = NULL;
+
+	//Run MRPSO GPU for the given number of iterations.
+	for (i = 1; i <= run->numIterations; i++)
+	{
+		//Update the Position and Velocity
+
+		//Update the Fitness
+
+		//Update the local and swarm best positions
+
+		if (i % run->iterationsBeforeSwap == 0)
+		{
+			//Build up the swap indices for each swarm
+
+
+			//Swap particles between swarms
+
+		}
+
+
+	}
 
 	return matching;
 }

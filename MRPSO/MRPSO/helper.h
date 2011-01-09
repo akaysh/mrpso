@@ -59,8 +59,6 @@ typedef struct
 	float energy;		//Amount of energy used by this Machine every unit of time.
 } Machine;
 
-
-
 /* RunConfiguration
  *
  * A structure for storing the configuration required for a single run of
@@ -109,5 +107,23 @@ float ComputeEnergyUse(float *matching, int numTasks);
 
 int CalcNumBlocks(int numThreads, int threadsPerBlock);
 bool InitCUDA();
+
+void AllocateGPUMemory(RunConfiguration *run);
+void FreeGPUMemory();
+void GenerateRandsGPU(RunConfiguration *run);
+
+extern float *hPosition, *dPosition;
+
+extern float *hVelocity, *dVelocity;
+
+extern float *hPBest, *dPBest, *hPBestPosition, *dPBestPosition;
+
+extern float *hGBest, *dGBest, *hGBestPosition, *dGBestPosition;
+
+extern float *dScratch;
+
+extern float *dSwapIndices;
+
+extern float *hRands, *dRands;
 
 #endif
