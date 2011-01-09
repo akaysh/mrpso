@@ -21,4 +21,6 @@ void TestMakespanResults(char *filename);
 
 void RunGPUCorrectnessTests();
 
+void RunGPURandGenTests();
+
 #endif

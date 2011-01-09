@@ -1,7 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+#include "curand.h"
 #include "helper.h"
+
+float *hPosition, *dPosition;
+
+float *hVelocity, *dVelocity;
+
+float *hPBest, *dPBest, *hPBestPosition, *dPBestPosition;
+
+float *hGBest, *dGBest, *hGBestPosition, *dGBestPosition;
+
+float *dScratch;
+
+float *dSwapIndices;
+
+float *hRands, *dRands;
+
 
 int numMachines, numTasks;
 
@@ -11,6 +28,58 @@ Task *hTasks = NULL;
 
 FILE *runsFile;
 RunConfiguration *run = NULL;
+
+/* AllocateGPUMemory
+ *
+ * Allocates the required memory on the GPU's global memory system.
+ */
+void AllocateGPUMemory(RunConfiguration *run)
+{
+	cudaMalloc((void**) &dPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
+	cudaMalloc((void**) &dVelocity, run->numParticles * run->numSwarms * numTasks * sizeof(float));
+	cudaMalloc((void**) &dGBest, run->numSwarms * sizeof(float));
+	cudaMalloc((void**) &dGBestPosition, run->numSwarms * numTasks * sizeof(float));
+	cudaMalloc((void**) &dPBest, run->numParticles * run->numSwarms * sizeof(float));
+	cudaMalloc((void**) &dPBestPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
+	cudaMalloc((void**) &dScratch, run->numParticles * run->numSwarms * numMachines * sizeof(float));
+	cudaMalloc((void**) &dSwapIndices, run->numSwarms * run->numParticlesToSwap * 2 * sizeof(float));
+	cudaMalloc((void**) &dRands, run->numParticles * run->numSwarms *  run->numIterations * 2 * sizeof(float));
+}
+
+/* FreeGPUMemory
+ *
+ * Frees the previously allocated GPU memory.
+ */
+void FreeGPUMemory()
+{
+	cudaFree(dPosition);
+	cudaFree(dVelocity);
+	cudaFree(dGBest);
+	cudaFree(dGBestPosition);
+	cudaFree(dPBest);
+	cudaFree(dPBestPosition);
+	cudaFree(dScratch);
+	cudaFree(dSwapIndices);
+	cudaFree(dRands);
+}
+
+/* GenerateRandsGPU
+ *
+ * Generates all of the GPU random numbers required for the
+ * given run configuration.
+ */
+void GenerateRandsGPU(RunConfiguration *run)
+{
+	curandGenerator_t gen1;
+
+	curandCreateGenerator(&gen1, CURAND_RNG_PSEUDO_XORWOW);
+	curandSetPseudoRandomGeneratorSeed(gen1, (unsigned int) time(NULL));
+	curandGenerateUniform(gen1, dRands, run->numParticles * run->numSwarms * run->numIterations * 2);
+	curandDestroyGenerator(gen1);
+
+	//Reset the stack size to get our memory back.
+	cudaThreadSetLimit(cudaLimitStackSize, 1024);
+}
 
 
 int OpenRunsFile(char *filename)
@@ -37,6 +106,7 @@ RunConfiguration *GetNextRun()
 	char line[512];
 
 	FreeCPUMemory();
+	FreeGPUMemory();
 
 	if (runsFile != NULL)
 	{
@@ -69,6 +139,7 @@ RunConfiguration *GetNextRun()
 			BuildMachineList(run->machineFile);
 			BuildTaskList(run->taskFile);
 			GenerateETCMatrix();
+			AllocateGPUMemory(run);
 		}
 	}
 	else
