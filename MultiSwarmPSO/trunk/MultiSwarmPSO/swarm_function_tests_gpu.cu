@@ -176,7 +176,7 @@ int TestSwapParticles()
 	threadsPerBlock = 32;
 	numBlocks = CalcNumBlocks(numSwarms * numToSwap, threadsPerBlock);
 
-	SwapBestParticles<<<numBlocks, threadsPerBlock>>>(numSwarms, numTasks, numToSwap, dBestSwapIndices, dWorstSwapIndices, dPosition, dVelocity);
+	SwapBestParticles<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numTasks, numToSwap, dBestSwapIndices, dWorstSwapIndices, dPosition, dVelocity);
 	cudaThreadExit();
 
 	//Copy the data back
