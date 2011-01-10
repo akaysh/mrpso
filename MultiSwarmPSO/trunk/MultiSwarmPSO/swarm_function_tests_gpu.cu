@@ -64,7 +64,7 @@ int floatcomp(const void* elem1, const void* elem2)
 
 int TestSwapParticles()
 {
-	int i, j, k;
+	int i, j, k, mySwarmOffset, previousSwarmOffset, neighborSwarmOffset, previousSwarmValue, neighborSwarmValue;
 	int passed = 1;
 	Particle *particles;
 	float *hPosition, *dPosition, *hVelocity, *dVelocity;
@@ -159,13 +159,9 @@ int TestSwapParticles()
 			{
 				hPosition[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
 				hVelocity[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
-
-				printf("Writing to value: %d\n", (i * numParticles * numTasks) + j * numTasks + k); 
 			}
 		}
 	}
-
-
 
 	//Copy the memory over to the GPU
 	cudaMemcpy(dPosition, hPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyHostToDevice);
@@ -177,7 +173,7 @@ int TestSwapParticles()
 	numBlocks = CalcNumBlocks(numSwarms * numToSwap, threadsPerBlock);
 
 	SwapBestParticles<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numTasks, numToSwap, dBestSwapIndices, dWorstSwapIndices, dPosition, dVelocity);
-	cudaThreadExit();
+	cudaThreadSynchronize();
 
 	//Copy the data back
 	cudaMemcpy(hPosition, dPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyDeviceToHost);
@@ -186,12 +182,36 @@ int TestSwapParticles()
 	//Ensure that the correct modified numbers were added.
 	for (i = 0; i < numSwarms; i++)
 	{
+		mySwarmOffset = i * numParticles * numTasks;
 
+		previousSwarmValue = i != 0 ? i - 1 : numSwarms - 1;
+		previousSwarmOffset = previousSwarmValue * numParticles * numTasks;
 
+		neighborSwarmValue = i < numSwarms - 1 ? i + 1 : 0;
+		neighborSwarmOffset = neighborSwarmValue * numParticles * numTasks;
 
+		//For this swarm ensure our 'best' particles position and velocity values are now equal to our neighboring swarm's values.
+		//				 ensure our 'worst' particles position and velocity values are now equal to the "previous" swarm's values.
+		for (j = 0; j < numToSwap; j++)
+		{
+			for (k = 0; k < numTasks; k++)
+			{
+				if(abs(hPosition[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				{
+					printf("[ERROR] - GPU Position value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+						                          hPosition[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
+					passed = 0;
+				}
+
+				if(abs(hVelocity[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				{
+					printf("[ERROR] - GPU Velocity value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+						                          hVelocity[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
+					passed = 0;
+				}
+			}
+		}
 	}
-
-
 
 	PrintTestResults(passed);
 
