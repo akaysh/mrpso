@@ -39,7 +39,7 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 	return makespan;
 }
 
-__global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
+__global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
 {
 	int i;
 	int bestIndex, worstIndex;
@@ -61,8 +61,8 @@ __global__ void SwapBestParticles(int numSwarms, int numTasks, int numToSwap, in
 		myIndex = threadID % numToSwap;	
 
 		//Compute the starting indices for the best and worst locations.
-		bestIndex = __mul24(bestSwapIndices[mySwarmIndex + myIndex], numTasks);
-		worstIndex = __mul24(worstSwapIndices[neighborSwarmIndex + myIndex], numTasks);
+		bestIndex = mySwarm * numParticles * numTasks + __mul24(bestSwapIndices[mySwarmIndex + myIndex], numTasks);
+		worstIndex = neighbor * numParticles * numTasks + __mul24(worstSwapIndices[neighborSwarmIndex + myIndex], numTasks);
 
 		printf("Thread %i swapping %i with %i\n", threadID, bestIndex, worstIndex);
 		
