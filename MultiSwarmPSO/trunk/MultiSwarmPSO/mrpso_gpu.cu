@@ -84,12 +84,35 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 	}
 }
 
-__device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numTasks, float *velocity, float *position, float *pBestPosition, 
+__device__ float ClampVelocity(int numMachines, float velocity)
+{
+	float clamp = 0.5f * numMachines;
+
+	if (velocity > clamp)
+		velocity = clamp;
+	else if (velocity < -clamp)
+		velocity = -clamp;
+
+	return velocity;
+}
+
+__device__ float ClampPosition(int numMachines, float position)
+{
+	if (position < 0.0f)
+		position = 0.0f;
+	else if (position > numMachines)
+		position = (float) numMachines;
+
+	return position;
+}
+
+__device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, float *pBestPosition, 
 										  float *gBestPosition, float *rands, ArgStruct args)
 {
-	//pBest offset is our block's offset + our thread id within the block
-	//Our block's offset is the block number times the number of particles per swarm times the dimenions (# of tasks).
-	int offset = (blockIdx.x * numParticles * numTasks) + (threadIdx.x * numTasks);
+	//Positions, Velocities, and pBests are stored as:
+	// s1p1v1, s1p2v1, s1p3v1, ..., pnvn
+	// s2p1v1, ...
+	int swarmOffset = blockIdx.x * numParticles * numTasks;
 	float newVel;
 	float lperb, gperb;
 	float currPos;
@@ -105,40 +128,54 @@ __device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 
 	for (i = 0; i < numTasks; i++)
 	{
-		currPos = position[offset + i];
-		newVel = velocity[offset + i];
+		currPos = position[swarmOffset + (i * numParticles) + threadIdx.x];
+		newVel = velocity[swarmOffset + (i * numParticles) + threadIdx.x];
 		
 		newVel *= args.x;
-		lperb = args.z * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2)] * (pBestPosition[offset + i] - currPos);
+		lperb = args.z * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2)] * (pBestPosition[swarmOffset + (i * numParticles) + threadIdx.x] - currPos);
 		gperb = args.w * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2 + 1)] * (sharedGBestPosition[i] - currPos);
 
 		newVel += lperb + gperb;
-		velocity[offset + i] = newVel;
+
+		//Clamp the velocity if required.
+		newVel = ClampVelocity(numMachines, newVel);
+
+		//Write out our velocity to global memory.
+		velocity[swarmOffset + (i * numParticles) + threadIdx.x] = newVel;
 
 		//Might as well update the position along this dimension while we're at it.
-		position[offset + i] += newVel;
+		currPos += newVel;
+		currPos = ClampPosition(numTasks, currPos);
+		position[swarmOffset + (i * numParticles) + threadIdx.x] = currPos;
 	}
 }
 
-__global__ void RunIteration(int numSwarms, int numParticles, int numTasks, float *position, float *velocity, float *pBest, float *pBestPosition, 
-							   float *gBest, float *gBestPosition, float *bestSwap, float *worstSwap, float *rands, ArgStruct args)
+__global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *position, float *pBest, float *pBestPosition)
+{
+
+
+
+}
+
+__global__ void RunIteration(int numSwarms, int numParticles, int numMachines, int numTasks, int totalIters, float *position, float *velocity, float *pBest, 
+							 float *pBestPosition, float *gBest, float *gBestPosition, float *bestSwap, float *worstSwap, float *rands, ArgStruct args)
 {
 	float fitness; //Fitness values are stored in registers as we do not need these values to persist.
 	int i;
 
+	for (i = 0; i < totalIters; i++)
+	{
+		//Update velocity and position of the particle.
+		UpdateVelocityAndPosition(numSwarms, numParticles, numMachines, numTasks, velocity, position, pBestPosition, gBestPosition, rands, args);
 
-	//Update fitness and velocity
-	UpdateVelocityAndPosition(numSwarms, numParticles, numTasks, velocity, position, pBestPosition, gBestPosition, rands, args);
+		//Update the local and global best values (we implicitly compute the fitness here).
 
-	//Update local best
+		__syncthreads();
 
-	__syncthreads();
-
-	//Update global best
-		
-	__syncthreads();
-
-
+		//Update global best
+			
+		__syncthreads();
+	}
 }
 
 
