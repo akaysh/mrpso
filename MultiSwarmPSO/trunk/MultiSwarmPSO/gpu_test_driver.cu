@@ -6,7 +6,7 @@ void RunGPUCorrectnessTests()
 {
 	printf("-----------------------------------\n");
 	printf("Starting all GPU Correctness Tests.\n");
-	printf("-----------------------------------\n\n");
+	printf("-----------------------------------\n");
 
 	RunGPUTextureTests();
 	RunSwarmFunctionTests();

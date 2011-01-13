@@ -29,12 +29,17 @@ Task *hTasks = NULL;
 FILE *runsFile;
 RunConfiguration *run = NULL;
 
+int initializationRandCount, iterationRandCount;
+
 /* AllocateGPUMemory
  *
  * Allocates the required memory on the GPU's global memory system.
  */
 void AllocateGPUMemory(RunConfiguration *run)
 {
+	initializationRandCount = run->numSwarms * run->numParticles * numTasks * 2;
+	iterationRandCount = run->numParticles * run->numSwarms *  run->numIterations * 2;
+
 	cudaMalloc((void**) &dPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dVelocity, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dGBest, run->numSwarms * sizeof(float));
@@ -44,7 +49,7 @@ void AllocateGPUMemory(RunConfiguration *run)
 	cudaMalloc((void**) &dScratch, run->numParticles * run->numSwarms * numMachines * sizeof(float));
 	cudaMalloc((void**) &dBestSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
 	cudaMalloc((void**) &dWorstSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
-	cudaMalloc((void**) &dRands, run->numParticles * run->numSwarms *  run->numIterations * 2 * sizeof(float));
+	cudaMalloc((void**) &dRands, initializationRandCount * iterationRandCount * sizeof(float));
 }
 
 /* FreeGPUMemory
@@ -70,13 +75,16 @@ void FreeGPUMemory()
  * Generates all of the GPU random numbers required for the
  * given run configuration.
  */
-void GenerateRandsGPU(RunConfiguration *run)
+void GenerateRandsGPU(RunConfiguration *run, int total)
 {
+	int numRands;
 	curandGenerator_t gen1;
+
+	numRands = total > 0 ? total : initializationRandCount * iterationRandCount;
 
 	curandCreateGenerator(&gen1, CURAND_RNG_PSEUDO_XORWOW);
 	curandSetPseudoRandomGeneratorSeed(gen1, (unsigned int) time(NULL));
-	curandGenerateUniform(gen1, dRands, run->numParticles * run->numSwarms * run->numIterations * 2);
+	curandGenerateUniform(gen1, dRands, numRands);
 	curandDestroyGenerator(gen1);
 
 	//Reset the stack size to get our memory back on fermi-based GPUs
@@ -548,7 +556,7 @@ bool InitCUDA()
 void PrintTestResults(int passed)
 {
 	if (passed)
-		printf("[SUCCESS] Test passed!\n\n");
+		printf("\t[SUCCESS] Test passed!\n\n");
 	else
-		printf("[FAILURE] Test failed!\n\n");
+		printf("\t[FAILURE] Test failed!\n\n");
 }

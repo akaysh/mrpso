@@ -87,6 +87,8 @@ int TestSwapParticles()
 	numTasks = 10;
 	numMachines = 4;
 
+	printf("\tRunning particle swap test...\n");
+
 	hPosition = (float *) malloc(numParticles * numSwarms * numTasks * sizeof(float));
 	hVelocity = (float *) malloc(numParticles * numSwarms * numTasks * sizeof(float));
 	bestListing = (int *) malloc(numToSwap * numSwarms * sizeof(int));
@@ -198,14 +200,14 @@ int TestSwapParticles()
 			{
 				if(abs(hPosition[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("[ERROR] - GPU Position value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+					printf("\t[ERROR] - GPU Position value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
 						                          hPosition[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
 
 				if(abs(hVelocity[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("[ERROR] - GPU Velocity value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+					printf("\t[ERROR] - GPU Velocity value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
 						                          hVelocity[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
@@ -238,7 +240,7 @@ int TestGPUMakespan()
 	threadsPerBlock = 64;
 	numBlocks = CalcNumBlocks(numMatchings, threadsPerBlock);
 
-	printf("Running GPU Makespan Test...\n");
+	printf("\tRunning GPU Makespan Test...\n");
 
 	srand((unsigned int) time(NULL));
 
@@ -272,6 +274,7 @@ int TestGPUMakespan()
 	cudaMemcpy(scratch, hScratch, sizeof(float) * numMatchings * GetNumMachines(), cudaMemcpyHostToDevice);
 
 	TestMakespan<<<numBlocks, threadsPerBlock>>>(GetNumTasks(), GetNumMachines(), numMatchings, matching, scratch, dOut);
+	cudaThreadSynchronize();
 
 	cudaMemcpy(gpuMakespans, dOut, sizeof(float) * numMatchings , cudaMemcpyDeviceToHost);
 
@@ -279,7 +282,7 @@ int TestGPUMakespan()
 	{
 		if (abs(gpuMakespans[i] - cpuMakespans[i]) > ACCEPTED_DELTA)
 		{
-			printf("[ERROR] - %d GPU Makespan was: %f (expected: %f)\n", i, gpuMakespans[i], cpuMakespans[i]);
+			printf("\t[ERROR] - %d GPU Makespan was: %f (expected: %f)\n", i, gpuMakespans[i], cpuMakespans[i]);
 			passed = 0;
 		}
 	}
@@ -302,15 +305,13 @@ void RunSwarmFunctionTests()
 {
 	int passed = 1;
 
-	printf("Starting GPU Swarm Function tests...\n\n");
+	printf("\nStarting GPU Swarm Function tests...\n\n");
 
 	passed &= TestSwapParticles();
 	passed &= TestGPUMakespan();
 
 	if (passed)
-		printf("All swarm function tests passed!\n\n");
+		printf("[PASSED] All swarm function tests passed!\n\n");
 	else
-		printf("Swarm function tests failed!\n\n");
-
-
+		printf("[FAILED] Swarm function tests failed!\n\n");
 }

@@ -3,6 +3,8 @@
 
 #include <cuda_runtime.h>
 
+__global__ void InitializeParticles(int totalParticles, int numTasks, int numMachines, float *position, float *velocity, float *randNums);
+
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, 
 								  int *worstSwapIndices, float *position, float *velocity);
 

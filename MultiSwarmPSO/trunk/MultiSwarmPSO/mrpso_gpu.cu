@@ -39,6 +39,26 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 	return makespan;
 }
 
+/* InitializeParticles
+ *
+ * Initializes the position and velocity of the particles. Each thread is resposible
+ * for a single dimension of a single particle.
+ */
+__global__ void InitializeParticles(int totalParticles, int numTasks, int numMachines, float *position, float *velocity, float *randNums)
+{
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
+	int myRand1, myRand2, randOffset;
+
+	if (threadID < __mul24(totalParticles, numTasks))
+	{
+		randOffset = __mul24(totalParticles, numTasks);
+		myRand1 = randNums[threadID];
+		myRand2 = randNums[threadID + randOffset];
+		position[threadID] = __mul24(numMachines - 1, myRand1);	
+		velocity[threadID] = __mul24(numMachines >> 2, myRand2);
+	}
+}
+
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
 {
 	int i;
@@ -118,10 +138,10 @@ __device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	float currPos;
 	int i;
 
-	//Have the first numTasks threads load in the gBestPosition into shared memory so it can be broadcast while updating velocity.
-	if (threadIdx.x < numTasks)
+	//Push the global best position into shared memory so these values can be broadcast to all threads later.
+	for (i = threadIdx.x; i < numTasks; i+= blockDim.x)
 	{
-		sharedGBestPosition[threadIdx.x] = gBestPosition[blockIdx.x * numTasks + threadIdx.x];
+		sharedGBestPosition[i] = gBestPosition[blockIdx.x * numTasks + i];
 	}
 
 	__syncthreads();

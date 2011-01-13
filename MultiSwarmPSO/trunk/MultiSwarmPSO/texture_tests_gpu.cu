@@ -35,7 +35,7 @@ int TestTextureReads()
 	float *dOut;
 	float *gpuETCMatrix;
 
-	printf("Running Texture Read Test...\n");
+	printf("\tRunning Texture Read Test...\n");
 	
 	BuildMachineList("machines8.txt");
 	BuildTaskList("tasks80.txt");
@@ -52,6 +52,7 @@ int TestTextureReads()
 	texETCMatrix.filterMode = cudaFilterModePoint;
 
 	TestTexture<<<80, 8>>>(GetNumTasks(), GetNumMachines(), dOut);
+	cudaThreadSynchronize();
 
 	cudaMemcpy(gpuETCMatrix, dOut, sizeof(float)*GetNumMachines() *GetNumTasks(), cudaMemcpyDeviceToHost);
 
@@ -59,7 +60,7 @@ int TestTextureReads()
 	{
 		if (gpuETCMatrix[i] - hETCMatrix[i] > ACCEPTED_DELTA)
 		{
-			printf("[ERROR] - GPU ETC Matrix was: %f (expected: %f)\n", gpuETCMatrix[i], hETCMatrix[i]);
+			printf("\t[ERROR] - GPU ETC Matrix was: %f (expected: %f)\n", gpuETCMatrix[i], hETCMatrix[i]);
 			passed = 0;
 		}
 	}
@@ -88,7 +89,7 @@ int TestTextureReadsRandom()
 
 	threadsPerBlock = 64;
 
-	printf("Running Texture Read Random Test...\n");
+	printf("\tRunning Texture Read Random Test...\n");
 	
 	BuildMachineList("machines8.txt");
 	BuildTaskList("tasks80.txt");
@@ -122,6 +123,7 @@ int TestTextureReadsRandom()
 	numBlocks = CalcNumBlocks(GetNumTasks(), threadsPerBlock);
 
 	TestRandTexture<<<numBlocks, threadsPerBlock>>>(dMatching, dOut, GetNumTasks(), GetNumMachines());
+	cudaThreadSynchronize();
 
 	cudaMemcpy(gpuOut, dOut, GetNumTasks() * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -132,8 +134,8 @@ int TestTextureReadsRandom()
 	{
 		if (abs(gpuOut[i] - cpuOut[i]) > ACCEPTED_DELTA)
 		{
-			printf("[ERROR] - %d GPU ETC Matrix was: %f (expected: %f)\n", i, gpuOut[i], cpuOut[i]);
-			printf("\tOriginal matching value used: %f\n", hMatching[i]);
+			printf("\t[ERROR] - %d GPU ETC Matrix was: %f (expected: %f)\n", i, gpuOut[i], cpuOut[i]);
+			printf("\t\tOriginal matching value used: %f\n", hMatching[i]);
 			passed = 0;
 		}
 	}
@@ -152,13 +154,13 @@ void RunGPUTextureTests()
 {
 	int passed = 1;
 
-	printf("Starting GPU Texture tests...\n\n");
+	printf("\nStarting GPU Texture tests...\n\n");
 
 	passed &= TestTextureReads();
 	passed &= TestTextureReadsRandom();
 
 	if (passed)
-		printf("All texture tests passed!\n\n");
+		printf("[PASSED] All texture tests passed!\n\n");
 	else
-		printf("Texture tests failed!\n\n");
+		printf("[FAILED] Texture tests failed!\n\n");
 }
