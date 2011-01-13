@@ -111,7 +111,7 @@ bool InitCUDA();
 
 void AllocateGPUMemory(RunConfiguration *run);
 void FreeGPUMemory();
-void GenerateRandsGPU(RunConfiguration *run);
+void GenerateRandsGPU(int total, float *deviceMem);
 
 extern float *hPosition, *dPosition;
 

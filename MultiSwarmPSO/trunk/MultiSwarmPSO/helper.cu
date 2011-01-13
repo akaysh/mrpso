@@ -75,7 +75,7 @@ void FreeGPUMemory()
  * Generates all of the GPU random numbers required for the
  * given run configuration.
  */
-void GenerateRandsGPU(RunConfiguration *run, int total)
+void GenerateRandsGPU(int total, float *deviceMem)
 {
 	int numRands;
 	curandGenerator_t gen1;
@@ -84,7 +84,7 @@ void GenerateRandsGPU(RunConfiguration *run, int total)
 
 	curandCreateGenerator(&gen1, CURAND_RNG_PSEUDO_XORWOW);
 	curandSetPseudoRandomGeneratorSeed(gen1, (unsigned int) time(NULL));
-	curandGenerateUniform(gen1, dRands, numRands);
+	curandGenerateUniform(gen1, deviceMem, numRands);
 	curandDestroyGenerator(gen1);
 
 	//Reset the stack size to get our memory back on fermi-based GPUs

@@ -22,6 +22,7 @@ void TestMakespanResults(char *filename);
 void RunGPUCorrectnessTests();
 void RunGPUTextureTests();
 void RunSwarmFunctionTests();
+void RunSwarmInitializationTests();
 
 void RunGPURandGenTests();
 

@@ -47,15 +47,16 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 __global__ void InitializeParticles(int totalParticles, int numTasks, int numMachines, float *position, float *velocity, float *randNums)
 {
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-	int myRand1, myRand2, randOffset;
+	float myRand1, myRand2;
+	int randOffset;
 
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
 		randOffset = __mul24(totalParticles, numTasks);
 		myRand1 = randNums[threadID];
 		myRand2 = randNums[threadID + randOffset];
-		position[threadID] = __mul24(numMachines - 1, myRand1);	
-		velocity[threadID] = __mul24(numMachines >> 2, myRand2);
+		position[threadID] = (numMachines - 1) * myRand1;	
+		velocity[threadID] = (numMachines >> 1) * myRand2;
 	}
 }
 
