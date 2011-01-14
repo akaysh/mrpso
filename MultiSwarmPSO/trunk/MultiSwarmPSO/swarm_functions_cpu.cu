@@ -343,7 +343,6 @@ void UpdateVelocityBasic(Particle *particle, float w, float c1, float c2, float 
 
 		particle->velocityVector[i] = newVelocity;
 	}
-
 }
 
 /* UpdateVelocityDiscrete

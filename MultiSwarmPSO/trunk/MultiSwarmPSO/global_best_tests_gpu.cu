@@ -85,7 +85,7 @@ void FindGlobalBest(float *pBest, float *pBestPositionVector, int numParticles, 
 int GlobalBestDeterminationTest()
 {
 	int passed = 1;
-	int i, j;
+	int i, j, k;
 	float *hPBest, *dPBest, *cpuPBest;
 	float *hGBest, *dGBest, *cpuGBest;
 	float *hPBestPosition, *dPBestPosition, *cpuPBestPosition;
@@ -175,6 +175,17 @@ int GlobalBestDeterminationTest()
 		{
 			printf("\t[ERROR] - GPU global best value for swarm %d was: %f (expected: %f)\n", i, hGBest[i], cpuGBest[i]);
 			passed = 0;
+		}
+
+		for (j = 0; j < numParticles; j++)
+		{
+			if (abs(hPBest[i * numParticles + j] - cpuPBest[i * numParticles + j]) > ACCEPTED_DELTA)
+			{
+				printf("\t[ERROR] - GPU particle best value for particle [%d:%d] was: %f (expected: %f)\n", j, i, 
+					   hPBest[i * numParticles + j], cpuPBest[i * numParticles + j]);
+				passed = 0;
+			}
+
 		}
 
 	}
