@@ -33,7 +33,6 @@ __global__ void FindGBests(int numSwarms, int numParticles, int numTasks, float 
 		{
 			if (gBestCandidates[threadIdx.x] > gBestCandidates[threadIdx.x + i]) //Then replace the value!
 			{
-				printf("Swarm %d, thread %d replacing %f with %f\n", blockIdx.x, threadIdx.x, gBestCandidates[threadIdx.x], gBestCandidates[threadIdx.x + i]);
 				gBestCandidateIndices[threadIdx.x] = gBestCandidateIndices[threadIdx.x + i];
 				gBestCandidates[threadIdx.x] = gBestCandidates[threadIdx.x + i];
 			}
@@ -48,7 +47,8 @@ __global__ void FindGBests(int numSwarms, int numParticles, int numTasks, float 
 
 	if (threadIdx.x == 0)
 	{
-		gBest[blockIdx.x] = gBestCandidates[0];
+		if (gBest[blockIdx.x] > gBestCandidates[0])
+			gBest[blockIdx.x] = gBestCandidates[0];
 
 		for (i = 0; i < numTasks; i++)
 			gBestPosition[blockIdx.x * numTasks + i] = pBestPosition[swarmOffset + particleOffset + i];
@@ -94,7 +94,7 @@ int GlobalBestDeterminationTest()
 	int numBlocks, threadsPerBlock;
 
 	numSwarms = 40;
-	numParticles = 2;
+	numParticles = 64;
 	numTasks = 200;
 	numMachines = 8;
 	threadsPerBlock = numParticles;
