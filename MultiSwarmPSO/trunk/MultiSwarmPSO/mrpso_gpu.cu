@@ -59,8 +59,6 @@ __global__ void InitializeParticles(int totalParticles, int numTasks, int numMac
 		velocity[threadID] = (numMachines >> 1) * myRand2;
 	}
 }
-
-
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
 {
 	int i;
@@ -128,14 +126,8 @@ __device__ float ClampPosition(int numMachines, float position)
 	return position;
 }
 
-__global__ void GenSwapIndices(int numSwarms, int numParticles, float *fitness)
-{
-
-
-}
-
-__global__ void UpdateVelocityAndPositionThreads(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
-												 float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args)
+__global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
+										  float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args)
 {
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	float newVel;
@@ -173,50 +165,6 @@ __global__ void UpdateVelocityAndPositionThreads(int numSwarms, int numParticles
 	}
 }
 
-__device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, float *pBestPosition, 
-										  float *gBestPosition, float *rands, ArgStruct args)
-{
-	//Positions, Velocities, and pBests are stored as:
-	// s1p1v1, s1p2v1, s1p3v1, ..., pnvn
-	// s2p1v1, ...
-	int swarmOffset = blockIdx.x * numParticles * numTasks;
-	float newVel;
-	float lperb, gperb;
-	float currPos;
-	int i;
-
-	//Push the global best position into shared memory so these values can be broadcast to all threads later.
-	for (i = threadIdx.x; i < numTasks; i+= blockDim.x)
-	{
-		sharedGBestPosition[i] = gBestPosition[blockIdx.x * numTasks + i];
-	}
-
-	__syncthreads();
-
-	for (i = 0; i < numTasks; i++)
-	{
-		currPos = position[swarmOffset + (i * numParticles) + threadIdx.x];
-		newVel = velocity[swarmOffset + (i * numParticles) + threadIdx.x];
-		
-		newVel *= args.x;
-		lperb = args.z * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2)] * (pBestPosition[swarmOffset + (i * numParticles) + threadIdx.x] - currPos);
-		gperb = args.w * rands[(blockIdx.x * numParticles * numTasks * 2) + (threadIdx.x * 2 + 1)] * (sharedGBestPosition[i] - currPos);
-
-		newVel += lperb + gperb;
-
-		//Clamp the velocity if required.
-		newVel = ClampVelocity(numMachines, newVel);
-
-		//Write out our velocity to global memory.
-		velocity[swarmOffset + (i * numParticles) + threadIdx.x] = newVel;
-
-		//Might as well update the position along this dimension while we're at it.
-		currPos += newVel;
-		currPos = ClampPosition(numMachines, currPos);
-		position[swarmOffset + (i * numParticles) + threadIdx.x] = currPos;
-	}
-}
-
 __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *position, float *pBest, float *pBestPosition)
 {
 
@@ -224,45 +172,37 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 
 }
 
-__global__ void RunIteration(int numSwarms, int numParticles, int numMachines, int numTasks, int totalIters, float *position, float *velocity, float *pBest, 
-							 float *pBestPosition, float *gBest, float *gBestPosition, float *bestSwap, float *worstSwap, float *rands, ArgStruct args)
-{
-	float fitness; //Fitness values are stored in registers as we do not need these values to persist.
-	int i;
-
-	for (i = 0; i < totalIters; i++)
-	{
-		//Update velocity and position of the particle.
-		UpdateVelocityAndPosition(numSwarms, numParticles, numMachines, numTasks, velocity, position, pBestPosition, gBestPosition, rands, args);
-
-		//Update the local and global best values (we implicitly compute the fitness here).
-
-		__syncthreads();
-
-		//Update global best
-			
-		__syncthreads();
-	}
-}
-
 
 float *MRPSODriver(RunConfiguration *run)
 {
 	int i;
 	float *matching = NULL;
+	int threadsPerBlock, numBlocks;
+	int totalComponents;
+	int numMachines, numTasks;
+	ArgStruct args;
 
-	return matching;
-}
+	threadsPerBlock = run->threadsPerBlock;
+	totalComponents = run->numSwarms * run->numParticles * numTasks;
+	args.x = run->w;
+	args.y = run->wDecay;
+	args.z = run->c1;
+	args.w = run->c2;
 
-float *MRPSODriverIndividual(RunConfiguration *run)
-{
-	int i;
-	float *matching = NULL;
+	numMachines = GetNumMachines();
+	numTasks = GetNumTasks();
+
+	numBlocks = CalcNumBlocks(totalComponents, threadsPerBlock);
+
+	//Initialize our particles.
+	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms * run->numParticles, numTasks, numMachines, dPosition, dVelocity, dRands);
 
 	//Run MRPSO GPU for the given number of iterations.
 	for (i = 1; i <= run->numIterations; i++)
 	{
 		//Update the Position and Velocity
+		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, i - 1, 
+																  dVelocity, dPosition, dPBestPosition, dGBestPosition, dRands, args);
 
 		//Update the Fitness
 
@@ -276,8 +216,6 @@ float *MRPSODriverIndividual(RunConfiguration *run)
 			//Swap particles between swarms
 
 		}
-
-
 	}
 
 	return matching;

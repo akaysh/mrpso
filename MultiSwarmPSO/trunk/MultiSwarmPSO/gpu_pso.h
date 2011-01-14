@@ -8,7 +8,7 @@ __global__ void InitializeParticles(int totalParticles, int numTasks, int numMac
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, 
 								  int *worstSwapIndices, float *position, float *velocity);
 
-__global__ void UpdateVelocityAndPositionThreads(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
-												 float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args);
+__global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
+										  float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args);
 
 #endif

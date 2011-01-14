@@ -77,6 +77,7 @@ typedef struct
 	float wDecay;				//The amount of decay in w at each iteration.
 	float c1;					//The local perturbation parameter.
 	float c2;					//The global perturbation parameter.
+	int threadsPerBlock;		//The number of threads per block to use for basic kernels.
 } RunConfiguration;
 
 extern float *hETCMatrix;
