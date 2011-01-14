@@ -695,6 +695,14 @@
 					RelativePath=".\swarm_functions_cpu.cu"
 					>
 				</File>
+				<Filter
+					Name="Tests"
+					>
+					<File
+						RelativePath=".\mrpso_solution_quality_tests_cpu.cu"
+						>
+					</File>
+				</Filter>
 			</Filter>
 			<Filter
 				Name="GPU"
@@ -706,6 +714,10 @@
 				<Filter
 					Name="Tests"
 					>
+					<File
+						RelativePath=".\global_best_tests_gpu.cu"
+						>
+					</File>
 					<File
 						RelativePath=".\gpu_test_driver.cu"
 						>
@@ -755,6 +767,10 @@
 		</Filter>
 		<File
 			RelativePath=".\machines8.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\runs.txt"
 			>
 		</File>
 		<File

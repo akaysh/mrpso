@@ -60,6 +60,7 @@ __global__ void InitializeParticles(int totalParticles, int numTasks, int numMac
 	}
 }
 
+
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
 {
 	int i;
@@ -125,6 +126,12 @@ __device__ float ClampPosition(int numMachines, float position)
 		position = (float) numMachines;
 
 	return position;
+}
+
+__global__ void GenSwapIndices(int numSwarms, int numParticles, float *fitness)
+{
+
+
 }
 
 __device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, float *pBestPosition, 

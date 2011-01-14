@@ -23,7 +23,10 @@ void RunGPUCorrectnessTests();
 void RunGPUTextureTests();
 void RunSwarmFunctionTests();
 void RunSwarmInitializationTests();
+void RunGlobalBestTests();
 
 void RunGPURandGenTests();
+
+void TestMRPSOCPUResults(char *filename);
 
 #endif
