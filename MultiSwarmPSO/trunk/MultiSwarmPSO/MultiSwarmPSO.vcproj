@@ -711,6 +711,10 @@
 					RelativePath=".\mrpso_gpu.cu"
 					>
 				</File>
+				<File
+					RelativePath=".\old_mrpso.cu"
+					>
+				</File>
 				<Filter
 					Name="Tests"
 					>
