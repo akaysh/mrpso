@@ -24,6 +24,7 @@ void RunGPUTextureTests();
 void RunSwarmFunctionTests();
 void RunSwarmInitializationTests();
 void RunGlobalBestTests();
+void RunPositionVelocityTests();
 
 void RunGPURandGenTests();
 

@@ -734,6 +734,10 @@
 						RelativePath=".\texture_tests_gpu.cu"
 						>
 					</File>
+					<File
+						RelativePath=".\update_vel_pos_tests_gpu.cu"
+						>
+					</File>
 				</Filter>
 			</Filter>
 		</Filter>

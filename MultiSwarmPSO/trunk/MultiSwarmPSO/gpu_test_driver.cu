@@ -12,5 +12,6 @@ void RunGPUCorrectnessTests()
 	RunSwarmFunctionTests();
 	RunSwarmInitializationTests();
 	RunGlobalBestTests();
+	RunPositionVelocityTests();
 
 }

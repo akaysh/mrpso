@@ -122,8 +122,8 @@ __device__ float ClampPosition(int numMachines, float position)
 {
 	if (position < 0.0f)
 		position = 0.0f;
-	else if (position > numMachines)
-		position = (float) numMachines;
+	else if (position > numMachines - 1)
+		position = (float) numMachines - 1;
 
 	return position;
 }
@@ -132,6 +132,45 @@ __global__ void GenSwapIndices(int numSwarms, int numParticles, float *fitness)
 {
 
 
+}
+
+__global__ void UpdateVelocityAndPositionThreads(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
+												 float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args)
+{
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
+	float newVel;
+	float currPos;
+	int randOffset;
+	int totalParticles = numSwarms * numParticles;
+	int gBestOffset;
+
+	//Each thread is responsible for updating one dimension of one particle's 
+	if (threadID < __mul24(totalParticles, numTasks))
+	{
+		//Two separate random numbers for every dimension for each particle each iteration.
+		randOffset = totalParticles * numTasks * iterationNum * 2 + (threadID * 2);
+
+		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
+		//divided by this thread's threadID.
+		gBestOffset = (threadID / (numParticles * numTasks)) * numTasks;
+		gBestOffset += threadID % numTasks;
+
+		currPos = position[threadID];
+		newVel = velocity[threadID];
+
+		newVel *= args.x;		
+		newVel += args.z * rands[randOffset] * (pBestPosition[threadID] - currPos);
+		newVel += args.w * rands[randOffset + 1] * (gBestPosition[gBestOffset] - currPos);	
+
+		//Write out our velocity
+		newVel = ClampVelocity(numMachines, newVel);
+		velocity[threadID] = newVel;
+
+		//Update the position
+		currPos += newVel;
+		currPos = ClampPosition(numMachines, currPos);
+		position[threadID] = currPos;
+	}
 }
 
 __device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, float *pBestPosition, 
@@ -173,7 +212,7 @@ __device__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 
 		//Might as well update the position along this dimension while we're at it.
 		currPos += newVel;
-		currPos = ClampPosition(numTasks, currPos);
+		currPos = ClampPosition(numMachines, currPos);
 		position[swarmOffset + (i * numParticles) + threadIdx.x] = currPos;
 	}
 }
