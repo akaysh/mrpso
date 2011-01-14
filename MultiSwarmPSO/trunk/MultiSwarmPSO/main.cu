@@ -33,6 +33,7 @@ int main(int argc, char* argv[])
 	
 	RunGPUCorrectnessTests();
 
+
 	getchar();
 
 	return 0;
