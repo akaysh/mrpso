@@ -77,28 +77,76 @@ __global__ void UpdateFitness(int numSwarms, int numParticles, int numTasks, int
 		fitness[threadID] = CalcMakespan(numTasks, numMachines, position, scratch);
 }
 
+/* UpdateBests
+ * 
+ * Updates both the particle-bests and swarm-best values.
+ * Each block must contains enough threads to handle each particle in a swarm.
+ * Shared memory requirements are the number of particles in a swarm * 2
+ */
 __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *pBest, float *pBestPositions, float *gBest, float *gBestPositions,
-							float *position, float *fitness);
+							float *position, float *fitness)
 {
 	extern __shared__ float fitnessValues[];
+	__shared__ float *indexValues;
+	int i;
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	int updateFitness;
-	//Each thread determines if they need to update their own fitness.
+	int gBestIndex;
 
+	indexValues = &fitnessValues[blockDim.x];
 
+	//Push the fitness values for this swarm into shared memory
+	if (threadIdx.x < numParticles)
+	{	
+		fitnessValues[threadIdx.x] = fitness[threadID];
+		indexValues[threadIdx.x] = threadIdx.x;
+	}
+
+	//Each thread determines if they need to update their own pbest value.
 	//If so, each thread updates the pBest and pBestPosition for their own data.
-
+	if (fitnessValues[threadIdx.x] < pBest[threadID])
+	{
+		pBest[threadID] = fitnessValues[threadIdx.x];
+		
+		for (i = 0; i < numTasks; i++)
+		{
+			pBestPositions[threadID * numTasks + i] = position[threadID * numTasks + i];
+		}
+	}
 
 	__syncthreads();
-
 
 	//Parallel reduction to find best fitness amongst threads in swarm
-
+	//We do this reduction in shared memory.
+	for (i = blockDim.x / 2; i > 0; i >>= 1)
+	{
+		if (threadIdx.x < i)
+		{
+			if (fitnessValues[threadIdx.x] > fitnessValues[threadIdx.x + i])
+			{
+				fitnessValues[threadIdx.x] = fitnessValues[threadIdx.x + i];
+				indexValues[threadIdx.x] = indexValues[threadIdx.x + i];
+			}
+		}
+		__syncthreads();
+	}
 
 	//All threads check if gBest must be updated (we just do this to avoid collaboration)
+	//Both the shared and global memory values will be broadcast anyways as each thread is
+	//accessing the same value, so the performance loss will be minimal.
+	updateFitness = 0;
 
-	__syncthreads();
+	if (fitnessValues[0] < gBest[blockIdx.x])
+		updateFitness = 1;	
 
 	//Update gBest and gBestPosition by using all threads in a for loop if necessary
+	if (updateFitness)
+	{
+		for (i = threadIdx.x; i < numParticles; i += blockDim.x)
+		{
+			
+		}
+	}
 
 
 }
