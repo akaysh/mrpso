@@ -6,7 +6,37 @@
 
 texture<float, 2, cudaReadModeElementType> texETCMatrix;
 
-extern __shared__ float sharedGBestPosition[];
+extern __shared__ float sharedScratch[];
+
+__device__ float CalcMakespanShared(int numTasks, int numMachines, float *matching)
+{
+	int i;
+	float makespan;
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
+	int taskOffset;
+	float matchingVal;
+	float val;
+	
+	makespan = 0.0f;
+	taskOffset = __mul24(threadID, numTasks);
+
+	//Clear our scratch table
+	for (i = 0; i < numTasks; i++)
+		sharedScratch[(int) floorf(matching[taskOffset + i])] = 0.0f;
+
+	for (i = 0; i < numTasks; i++)
+	{
+		matchingVal = matching[taskOffset + i];
+
+		sharedScratch[(int) floorf(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
+		val = sharedScratch[(int) floorf(matchingVal)];
+
+		if (val > makespan)
+			makespan = val;
+	}	
+
+	return makespan;
+}
 
 __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, float *scratch)
 {
@@ -37,6 +67,40 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 	}	
 
 	return makespan;
+}
+
+__global__ void UpdateFitness(int numSwarms, int numParticles, int numTasks, int numMachines, float *position, float *scratch, float *fitness)
+{
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
+
+	if (threadID < __mul24(numSwarms, numParticles))
+		fitness[threadID] = CalcMakespan(numTasks, numMachines, position, scratch);
+}
+
+__global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *pBest, float *pBestPositions, float *gBest, float *gBestPositions,
+							float *position, float *fitness);
+{
+	extern __shared__ float fitnessValues[];
+	int updateFitness;
+	//Each thread determines if they need to update their own fitness.
+
+
+	//If so, each thread updates the pBest and pBestPosition for their own data.
+
+
+	__syncthreads();
+
+
+	//Parallel reduction to find best fitness amongst threads in swarm
+
+
+	//All threads check if gBest must be updated (we just do this to avoid collaboration)
+
+	__syncthreads();
+
+	//Update gBest and gBestPosition by using all threads in a for loop if necessary
+
+
 }
 
 /* InitializeParticles
@@ -177,13 +241,15 @@ float *MRPSODriver(RunConfiguration *run)
 {
 	int i;
 	float *matching = NULL;
-	int threadsPerBlock, numBlocks;
+	int threadsPerBlock, numBlocks, numBlocksFitness;
+	int fitnessRequired;
 	int totalComponents;
 	int numMachines, numTasks;
 	ArgStruct args;
 
 	threadsPerBlock = run->threadsPerBlock;
 	totalComponents = run->numSwarms * run->numParticles * numTasks;
+	fitnessRequired = run->numSwarms * run->numParticles;
 	args.x = run->w;
 	args.y = run->wDecay;
 	args.z = run->c1;
@@ -193,6 +259,7 @@ float *MRPSODriver(RunConfiguration *run)
 	numTasks = GetNumTasks();
 
 	numBlocks = CalcNumBlocks(totalComponents, threadsPerBlock);
+	numBlocksFitness = CalcNumBlocks(fitnessRequired, 128);
 
 	//Initialize our particles.
 	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms * run->numParticles, numTasks, numMachines, dPosition, dVelocity, dRands);
@@ -203,8 +270,8 @@ float *MRPSODriver(RunConfiguration *run)
 		//Update the Position and Velocity
 		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, i - 1, 
 																  dVelocity, dPosition, dPBestPosition, dGBestPosition, dRands, args);
-
 		//Update the Fitness
+		UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
 
 		//Update the local and swarm best positions
 
@@ -214,6 +281,9 @@ float *MRPSODriver(RunConfiguration *run)
 
 
 			//Swap particles between swarms
+			SwapBestParticles<<<1, 1024>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 
+				                           dWorstSwapIndices, dPosition, dVelocity);
+
 
 		}
 	}

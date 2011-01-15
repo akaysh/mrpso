@@ -128,4 +128,6 @@ extern int *dBestSwapIndices, *dWorstSwapIndices;
 
 extern float *hRands, *dRands;
 
+extern float *hFitness, *dFitness;
+
 #endif

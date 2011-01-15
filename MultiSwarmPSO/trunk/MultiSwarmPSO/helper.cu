@@ -19,6 +19,8 @@ int *dBestSwapIndices, *dWorstSwapIndices;
 
 float *hRands, *dRands;
 
+float *hFitness, *dFitness;
+
 
 int numMachines, numTasks;
 
@@ -42,6 +44,7 @@ void AllocateGPUMemory(RunConfiguration *run)
 
 	cudaMalloc((void**) &dPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dVelocity, run->numParticles * run->numSwarms * numTasks * sizeof(float));
+	cudaMalloc((void**) &dFitness, run->numParticles * run->numSwarms * sizeof(float));
 	cudaMalloc((void**) &dGBest, run->numSwarms * sizeof(float));
 	cudaMalloc((void**) &dGBestPosition, run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dPBest, run->numParticles * run->numSwarms * sizeof(float));
@@ -60,6 +63,7 @@ void FreeGPUMemory()
 {
 	cudaFree(dPosition);
 	cudaFree(dVelocity);
+	cudaFree(dFitness);
 	cudaFree(dGBest);
 	cudaFree(dGBestPosition);
 	cudaFree(dPBest);
