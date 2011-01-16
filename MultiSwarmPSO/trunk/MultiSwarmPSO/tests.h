@@ -25,6 +25,7 @@ void RunSwarmFunctionTests();
 void RunSwarmInitializationTests();
 void RunGlobalBestTests();
 void RunPositionVelocityTests();
+void RunBestUpdateTests();
 
 void RunGPURandGenTests();
 
