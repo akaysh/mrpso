@@ -282,13 +282,6 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	}
 }
 
-__global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *position, float *pBest, float *pBestPosition)
-{
-
-
-
-}
-
 
 float *MRPSODriver(RunConfiguration *run)
 {
@@ -327,6 +320,8 @@ float *MRPSODriver(RunConfiguration *run)
 		UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
 
 		//Update the local and swarm best positions
+		UpdateBests<<<run->numSwarms, run->numParticles>>>(run->numSwarms, run->numParticles, numTasks, dPBest, dPBestPosition, dGBest, dGBestPosition,
+														   dPosition, dFitness);
 
 		if (i % run->iterationsBeforeSwap == 0)
 		{
