@@ -739,6 +739,10 @@
 						>
 					</File>
 					<File
+						RelativePath=".\update_bests_tests_gpu.cu"
+						>
+					</File>
+					<File
 						RelativePath=".\update_vel_pos_tests_gpu.cu"
 						>
 					</File>
