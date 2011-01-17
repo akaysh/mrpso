@@ -221,6 +221,28 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 	}
 }
 
+/* GenerateSwapIndices
+ *
+ * Generates the swap indices for swapping particles. Finds the best numToSwap and
+ * the worst numToSwap particles from each swarm and records the values.
+ *
+ * @BLOCKDIM - Requires numParticles particles per thread block.
+ * @SHAREDMEM - Requires numParticles * 2 + numToSwap * 2 elements of shared memory.
+ */
+__global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, float *bestSwapIndices, float *worstSwapIndices)
+{
+	extern __shared__ float sharedFitnessOriginal[];
+	__shared__ float *sharedFitnessBest, *sharedFitnessWorst;
+	__shared__ float *sharedIndices;
+
+	sharedFitnessBest = &sharedFitnessOriginal[blockDim.x];
+	sharedFitnessWorst = &sharedFitnessBest[numToSwap];
+	sharedIndices = &sharedFitnessWorst[numToSwap];
+
+
+
+}
+
 __device__ float ClampVelocity(int numMachines, float velocity)
 {
 	float clamp = 0.5f * numMachines;
