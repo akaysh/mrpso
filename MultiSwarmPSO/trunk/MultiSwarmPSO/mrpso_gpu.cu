@@ -310,6 +310,9 @@ float *MRPSODriver(RunConfiguration *run)
 	//Initialize our particles.
 	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms * run->numParticles, numTasks, numMachines, dPosition, dVelocity, dRands);
 
+	//Update the Fitness for the first time...
+	UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
+
 	//Run MRPSO GPU for the given number of iterations.
 	for (i = 1; i <= run->numIterations; i++)
 	{
