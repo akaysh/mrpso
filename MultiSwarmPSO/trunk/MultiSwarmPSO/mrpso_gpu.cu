@@ -227,18 +227,59 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
  * the worst numToSwap particles from each swarm and records the values.
  *
  * @BLOCKDIM - Requires numParticles particles per thread block.
- * @SHAREDMEM - Requires numParticles * 2 + numToSwap * 2 elements of shared memory.
+ * @SHAREDMEM - Requires numParticles * 3 + numToSwap * 2 elements of shared memory.
  */
 __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, float *bestSwapIndices, float *worstSwapIndices)
 {
 	extern __shared__ float sharedFitnessOriginal[];
 	__shared__ float *sharedFitnessBest, *sharedFitnessWorst;
-	__shared__ float *sharedIndices;
+	__shared__ float *sharedIndicesBest, *sharedIndicesWorst;
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
+	int i, j;
 
 	sharedFitnessBest = &sharedFitnessOriginal[blockDim.x];
 	sharedFitnessWorst = &sharedFitnessBest[numToSwap];
-	sharedIndices = &sharedFitnessWorst[numToSwap];
+	sharedIndicesBest = &sharedFitnessWorst[numToSwap];
+	sharedIndicesWorst = &sharedIndicesBest[blockDim.x];
 
+	//Push the fitness values for this swarm into shared memory
+	if (threadIdx.x < numParticles)
+	{	
+		sharedFitnessOriginal[threadIdx.x] = fitness[threadID];
+		sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
+		sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x];
+		sharedIndicesBest[threadIdx.x] = threadID;
+	}
+
+	//Main loop to find the 5 best/worst particles.
+	for (i = 0; i < numToSwap; i++)
+	{		
+		//Do a parallel reduction with half of the threads to find the best...
+		//(We ignore -1 fitness values as they do not represent a solution)
+		for (j = blockDim.x / 2; j > 0; j >>= 1)
+		{
+			if (threadIdx.x > j)
+			{
+
+
+			}
+
+		}
+
+
+		//Do a parallel reduction with the other half of the threads to find the worst...
+		//(We ignore -1 fitness values as they do not represent a solution)
+		for (j = blockDim.x - 1; j >= blockDim.x / 2; j++)
+		{
+			if (threadIdx.x - j > 0)
+			{
+
+
+			}
+
+		}
+
+	}
 
 
 }
