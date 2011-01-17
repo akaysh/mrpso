@@ -14,5 +14,6 @@ void RunGPUCorrectnessTests()
 	RunGlobalBestTests();
 	RunPositionVelocityTests();
 	RunBestUpdateTests();
+	RunSwapTests();
 
 }
