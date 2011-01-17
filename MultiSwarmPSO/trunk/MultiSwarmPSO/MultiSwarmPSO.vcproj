@@ -727,7 +727,11 @@
 						>
 					</File>
 					<File
-						RelativePath=".\swarm_function_tests_gpu.cu"
+						RelativePath=".\makespan_tests_gpu.cu"
+						>
+					</File>
+					<File
+						RelativePath=".\swap_tests_gpu.cu"
 						>
 					</File>
 					<File

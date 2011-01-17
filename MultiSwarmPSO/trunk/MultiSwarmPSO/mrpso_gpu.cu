@@ -227,20 +227,23 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
  * the worst numToSwap particles from each swarm and records the values.
  *
  * @BLOCKDIM - Requires numParticles particles per thread block.
- * @SHAREDMEM - Requires numParticles * 3 + numToSwap * 2 elements of shared memory.
+ * @SHAREDMEM - Requires numParticles * 5 + numToSwap * 2 elements of shared memory.
  */
 __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, float *bestSwapIndices, float *worstSwapIndices)
 {
 	extern __shared__ float sharedFitnessOriginal[];
 	__shared__ float *sharedFitnessBest, *sharedFitnessWorst;
 	__shared__ float *sharedIndicesBest, *sharedIndicesWorst;
+	__shared__ float *sharedTempIndicesBest, *sharedTempIndicesWorst;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	int i, j;
 
-	sharedFitnessBest = &sharedFitnessOriginal[blockDim.x];
-	sharedFitnessWorst = &sharedFitnessBest[numToSwap];
+	sharedFitnessBest = &sharedFitnessOriginal[blockDim.x];	
+	sharedIndicesWorst = &sharedFitnessBest[blockDim.x];
+	sharedTempIndicesBest = &sharedIndicesWorst[blockDim.x];
+	sharedTempIndicesWorst = &sharedIndicesBest[blockDim.x];
+	sharedFitnessWorst = &sharedTempIndicesWorst[numToSwap];
 	sharedIndicesBest = &sharedFitnessWorst[numToSwap];
-	sharedIndicesWorst = &sharedIndicesBest[blockDim.x];
 
 	//Push the fitness values for this swarm into shared memory
 	if (threadIdx.x < numParticles)
@@ -248,7 +251,8 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 		sharedFitnessOriginal[threadIdx.x] = fitness[threadID];
 		sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
 		sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x];
-		sharedIndicesBest[threadIdx.x] = threadID;
+		sharedTempIndicesBest[threadIdx.x] = threadIdx.x;
+		sharedTempIndicesWorst[threadIdx.x] = threadIdx.x;
 	}
 
 	//Main loop to find the 5 best/worst particles.
@@ -256,30 +260,64 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 	{		
 		//Do a parallel reduction with half of the threads to find the best...
 		//(We ignore -1 fitness values as they do not represent a solution)
-		for (j = blockDim.x / 2; j > 0; j >>= 1)
+		if (threadIdx.x < blockDim.x / 2)
 		{
-			if (threadIdx.x > j)
+			for (j = blockDim.x / 2; j > 0; j >>= 1)
 			{
-
-
+				if (threadIdx.x > j)
+				{
+					if (sharedFitnessBest[threadIdx.x] == -1 ||
+						(sharedFitnessBest[threadIdx.x] > sharedFitnessBest[threadIdx.x + i] && sharedFitnessBest[threadIdx.x + i] != -1))
+					{				
+						sharedFitnessBest[threadIdx.x] = sharedFitnessBest[threadIdx.x + i];
+						sharedTempIndicesBest[threadIdx.x] = sharedTempIndicesBest[threadIdx.x + i];
+					}
+				}
+				__syncthreads();
 			}
-
-		}
+		}//if...
 
 
 		//Do a parallel reduction with the other half of the threads to find the worst...
 		//(We ignore -1 fitness values as they do not represent a solution)
-		for (j = blockDim.x - 1; j >= blockDim.x / 2; j++)
+		if (threadIdx.x >= blockDim.x / 2)
 		{
-			if (threadIdx.x - j > 0)
+			for (j = blockDim.x - 1; j >= blockDim.x / 2; j >>= 1)
 			{
-
-
+				if (threadIdx.x - j > 0)
+				{
+					if (sharedFitnessWorst[threadIdx.x] == -1 ||
+						(sharedFitnessWorst[threadIdx.x] < sharedFitnessWorst[threadIdx.x + i] && sharedFitnessWorst[threadIdx.x + i] != -1))
+					{				
+						sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x + i];
+						sharedTempIndicesWorst[threadIdx.x] = sharedTempIndicesWorst[threadIdx.x + i];
+					}
+				}
+				__syncthreads();
 			}
+		}//if....
 
+		//Replace the index with -1 in the originals
+		if (threadIdx.x == 0)
+		{
+			sharedIndicesBest[i] = sharedTempIndicesBest[0];
+			sharedIndicesWorst[i] = sharedTempIndicesWorst[0];
+
+			sharedFitnessBest[(int) sharedIndicesBest[i]] = -1;
+			sharedFitnessWorst[(int) sharedIndicesWorst[i]] = -1;
 		}
 
-	}
+		//Reset the temp indices and shared fitness values.
+		if (threadIdx.x < numParticles)
+		{	
+			sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
+			sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x];
+			sharedTempIndicesBest[threadIdx.x] = threadIdx.x;
+			sharedTempIndicesWorst[threadIdx.x] = threadIdx.x;
+		}
+	}//for...
+
+	//Finally, write out the shared inde
 
 
 }

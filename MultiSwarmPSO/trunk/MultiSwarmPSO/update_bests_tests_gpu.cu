@@ -50,7 +50,7 @@ void FindGlobalBests(float *pBest, float *pBestPositionVector, int numParticles,
 int TestLocalAndGlobalBestUpdate()
 {
 	int passed = 1;
-	int i, j;
+	int i, j, k;
 	float *hPosition, *dPosition;
 	float *hPBest, *dPBest, *cpuPBest;
 	float *hGBest, *dGBest, *cpuGBest;
@@ -109,7 +109,7 @@ int TestLocalAndGlobalBestUpdate()
 	//Randomly generate our GBest values and positions.
 	for (i = 0; i < numSwarms; i++)
 	{
-		hGBest[i] = rand() % 10000000 + 1;
+		hGBest[i] = rand() % 100000000 + 1;
 
 		cpuGBest[i] = hGBest[i];
 
@@ -177,8 +177,16 @@ int TestLocalAndGlobalBestUpdate()
 				passed = 0;
 			}
 
+			for (k = 0; k < numTasks; k++)
+			{
+				if (abs(hPBestPosition[i * numParticles * numTasks + j * numTasks + k] - cpuPBestPosition[i * numParticles * numTasks + j * numTasks + k]) > ACCEPTED_DELTA)
+				{
+					printf("\t[ERROR] - GPU particle best position for swarm %d, particle %d, pos %d, was: %f (expected: %f)\n", i, j, k,
+						   hPBestPosition[i * numParticles * numTasks + j * numTasks + k], cpuPBestPosition[i * numParticles * numTasks + j * numTasks + k]);
+					passed = 0;
+				}
+			}
 		}
-
 	}
 
 	PrintTestResults(passed);
