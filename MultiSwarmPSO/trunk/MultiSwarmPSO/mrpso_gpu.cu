@@ -138,8 +138,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	__syncthreads();
 
 	if (fitnessValues[0] < gBest[blockIdx.x])
-	{
-		
+	{		
 		updateFitness = 1;	
 	}
 
@@ -239,87 +238,104 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 	int i, j;
 
 	sharedFitnessBest = &sharedFitnessOriginal[blockDim.x];	
-	sharedIndicesWorst = &sharedFitnessBest[blockDim.x];
-	sharedTempIndicesBest = &sharedIndicesWorst[blockDim.x];
-	sharedTempIndicesWorst = &sharedIndicesBest[blockDim.x];
-	sharedFitnessWorst = &sharedTempIndicesWorst[numToSwap];
-	sharedIndicesBest = &sharedFitnessWorst[numToSwap];
+	sharedFitnessWorst = &sharedFitnessBest[blockDim.x];
+	sharedTempIndicesBest = &sharedFitnessWorst[blockDim.x];
+	sharedTempIndicesWorst = &sharedTempIndicesBest[blockDim.x];	
+	sharedIndicesBest = &sharedFitnessWorst[blockDim.x];
+	sharedIndicesWorst = &sharedIndicesBest[numToSwap];	
 
 	//Push the fitness values for this swarm into shared memory
 	if (threadIdx.x < numParticles)
 	{	
 		sharedFitnessOriginal[threadIdx.x] = fitness[threadID];
 		sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
-		sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x];
+		sharedFitnessWorst[threadIdx.x] = sharedFitnessBest[threadIdx.x];
 		sharedTempIndicesBest[threadIdx.x] = threadIdx.x;
 		sharedTempIndicesWorst[threadIdx.x] = threadIdx.x;
 	}
 
-	//Main loop to find the 5 best/worst particles.
+	//Main loop to find the best/worst particles.
 	for (i = 0; i < numToSwap; i++)
 	{		
-		//Do a parallel reduction with half of the threads to find the best...
-		//(We ignore -1 fitness values as they do not represent a solution)
-		if (threadIdx.x < blockDim.x / 2)
+		printf("Thread %d searching for best...\n", threadIdx.x);
+
+		for (j = blockDim.x / 2; j > 0; j >>= 1)
 		{
-			for (j = blockDim.x / 2; j > 0; j >>= 1)
+			
+			if (threadIdx.x < j)
 			{
-				if (threadIdx.x > j)
+				if (sharedFitnessBest[threadIdx.x] == -1 ||
+					(sharedFitnessBest[threadIdx.x] > sharedFitnessBest[threadIdx.x + j] && sharedFitnessBest[threadIdx.x + j] != -1))
 				{
-					if (sharedFitnessBest[threadIdx.x] == -1 ||
-						(sharedFitnessBest[threadIdx.x] > sharedFitnessBest[threadIdx.x + i] && sharedFitnessBest[threadIdx.x + i] != -1))
-					{				
-						sharedFitnessBest[threadIdx.x] = sharedFitnessBest[threadIdx.x + i];
-						sharedTempIndicesBest[threadIdx.x] = sharedTempIndicesBest[threadIdx.x + i];
-					}
+					printf("Thread %d grabbing data %f to replace %f from (%d, %d)\n", threadIdx.x, sharedFitnessBest[threadIdx.x + j], sharedFitnessBest[threadIdx.x],
+																						threadIdx.x + j, threadIdx.x);
+					sharedFitnessBest[threadIdx.x] = sharedFitnessBest[threadIdx.x + j];
+					sharedTempIndicesBest[threadIdx.x] = sharedTempIndicesBest[threadIdx.x + j];
 				}
-				__syncthreads();
 			}
-		}//if...
+			
+			__syncthreads();
 
+			printf("we're finished here\n");
+			__syncthreads();
+		}
 
-		//Do a parallel reduction with the other half of the threads to find the worst...
-		//(We ignore -1 fitness values as they do not represent a solution)
-		if (threadIdx.x >= blockDim.x / 2)
+		printf("Thread %d searching for worst...\n", threadIdx.x);
+		__syncthreads();
+
+		for (j = numParticles / 2; j > 0; j >>= 1)
 		{
-			for (j = blockDim.x - 1; j >= blockDim.x / 2; j >>= 1)
+			if (threadIdx.x < j)
 			{
-				if (threadIdx.x - j > 0)
-				{
-					if (sharedFitnessWorst[threadIdx.x] == -1 ||
-						(sharedFitnessWorst[threadIdx.x] < sharedFitnessWorst[threadIdx.x + i] && sharedFitnessWorst[threadIdx.x + i] != -1))
-					{				
-						sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x + i];
-						sharedTempIndicesWorst[threadIdx.x] = sharedTempIndicesWorst[threadIdx.x + i];
-					}
+				if (sharedFitnessWorst[threadIdx.x] == -1 ||
+					(sharedFitnessWorst[threadIdx.x] < sharedFitnessWorst[threadIdx.x + j] && sharedFitnessWorst[threadIdx.x + j] != -1))
+				{				
+					printf("Thread %d grabbing data %f to replace %f from (%d, %d)\n", threadIdx.x, sharedFitnessWorst[threadIdx.x + j], sharedFitnessWorst[threadIdx.x],
+																						threadIdx.x + j, threadIdx.x);
+					sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x + j];
+					sharedTempIndicesWorst[threadIdx.x] = sharedTempIndicesWorst[threadIdx.x + j];
 				}
-				__syncthreads();
 			}
-		}//if....
-
+			__syncthreads();
+		}
+		
 		//Replace the index with -1 in the originals
 		if (threadIdx.x == 0)
 		{
 			sharedIndicesBest[i] = sharedTempIndicesBest[0];
 			sharedIndicesWorst[i] = sharedTempIndicesWorst[0];
-
-			sharedFitnessBest[(int) sharedIndicesBest[i]] = -1;
-			sharedFitnessWorst[(int) sharedIndicesWorst[i]] = -1;
 		}
+
+		printf("We found the best value as %f at index %f\n", sharedFitnessBest[0], sharedIndicesBest[i]);
+		printf("We found the worst value as %f at index %f\n", sharedFitnessWorst[0], sharedIndicesWorst[i]);
 
 		//Reset the temp indices and shared fitness values.
 		if (threadIdx.x < numParticles)
 		{	
 			sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
-			sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x];
+			sharedFitnessWorst[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
 			sharedTempIndicesBest[threadIdx.x] = threadIdx.x;
 			sharedTempIndicesWorst[threadIdx.x] = threadIdx.x;
 		}
+
+		if (threadIdx.x == 0)
+		{
+			sharedFitnessBest[(int) sharedIndicesBest[i]] = -1;
+			sharedFitnessWorst[(int) sharedIndicesWorst[i]] = -1;
+
+			printf("---------Replace values with %f %f--------------\n", sharedFitnessBest[(int) sharedIndicesBest[i]], sharedFitnessWorst[(int) sharedIndicesWorst[i]]);
+		}
+
+		__syncthreads();
 	}//for...
+	
 
-	//Finally, write out the shared inde
-
-
+	//Finally, write out the shared indices to global memory
+	if (threadIdx.x < numToSwap)
+	{
+		bestSwapIndices[blockDim.x * numToSwap + threadIdx.x] = sharedIndicesBest[threadIdx.x];
+		worstSwapIndices[blockDim.x * numToSwap + threadIdx.x] = sharedIndicesWorst[threadIdx.x];
+	}
 }
 
 __device__ float ClampVelocity(int numMachines, float velocity)

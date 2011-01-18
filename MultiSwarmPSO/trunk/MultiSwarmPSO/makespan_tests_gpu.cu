@@ -31,14 +31,14 @@ __device__ float CalcMakespanT(int numTasks, int numMachines, float *matching, f
 
 	//Clear our scratch table
 	for (i = 0; i < numTasks; i++)
-		scratch[machineOffset + GetDiscreteCoordT1(matching[taskOffset + i])] = 0.0f;
+		scratch[machineOffset + (int) floorf(matching[taskOffset + i])] = 0.0f;
 
 	for (i = 0; i < numTasks; i++)
 	{
 		matchingVal = matching[taskOffset + i];
 
-		scratch[machineOffset + GetDiscreteCoordT1(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
-		val = scratch[machineOffset + GetDiscreteCoordT1(matchingVal)];
+		scratch[machineOffset + (int) floorf(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
+		val = scratch[machineOffset + (int) floorf(matchingVal)];
 
 		if (val > makespan)
 			makespan = val;

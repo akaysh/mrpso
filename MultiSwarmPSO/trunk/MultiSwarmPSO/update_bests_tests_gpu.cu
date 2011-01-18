@@ -109,7 +109,7 @@ int TestLocalAndGlobalBestUpdate()
 	//Randomly generate our GBest values and positions.
 	for (i = 0; i < numSwarms; i++)
 	{
-		hGBest[i] = rand() % 100000000 + 1;
+		hGBest[i] = rand() % 1000000 + rand() % 10000 + rand() % 100330 + 1;
 
 		cpuGBest[i] = hGBest[i];
 
