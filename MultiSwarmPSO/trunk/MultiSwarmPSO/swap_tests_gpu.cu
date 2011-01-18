@@ -13,7 +13,7 @@ int floatcomp(const void* elem1, const void* elem2)
     return *(const float*)elem1 > *(const float*)elem2;
 }
 
-void GenBestWorst(int count, int numToSwap, float *fitness, float *bestIndices, float *worstIndices)
+void GenBestWorst(int count, int numToSwap, float *fitness, int *bestIndices, int *worstIndices)
 {
 	int i, j;
 	int currBestIndex, currWorstIndex;
@@ -38,7 +38,7 @@ void GenBestWorst(int count, int numToSwap, float *fitness, float *bestIndices, 
 				currBestIndex = j;
 			}
 
-			if (fitnessTemp[i] != -1.0f && fitnessTemp[j] > currWorstValue)
+			if (fitnessTemp[j] != -1.0f && fitnessTemp[j] > currWorstValue)
 			{
 				currWorstValue = fitnessTemp[j];
 				currWorstIndex = j;
@@ -58,33 +58,36 @@ void GenBestWorst(int count, int numToSwap, float *fitness, float *bestIndices, 
 int TestGenerateSwapIndices()
 {
 	int passed = 1;
-	int i;
+	int found;
+	int i, j, k;
 	float *hFitness, *dFitness;
-	float *hBestSwapIndices, *dBestSwapIndices, *cpuBestSwapIndices;
-	float *hWorstSwapIndices, *dWorstSwapIndices, *cpuWorstSwapIndices;
+	int *hBestSwapIndices, *dBestSwapIndices, *cpuBestSwapIndices;
+	int *hWorstSwapIndices, *dWorstSwapIndices, *cpuWorstSwapIndices;
 	int numSwarms, numParticles;
 	int numToSwap;
 
-	numSwarms = 1;
-	numParticles = 8;
-	numToSwap = 2;
+	numSwarms = 200;
+	numParticles = 64;
+	numToSwap = 10;
+
+	printf("\tRunning GPU swap index generation test...\n");
 
 	srand((unsigned int) time(NULL));
 
 	hFitness = (float *) malloc(numSwarms * numParticles * sizeof(float));
-	hBestSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
-	cpuBestSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
-	hWorstSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
-	cpuWorstSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
+	hBestSwapIndices = (int *) malloc(numSwarms * numToSwap * sizeof(int));
+	cpuBestSwapIndices = (int *) malloc(numSwarms * numToSwap * sizeof(int));
+	hWorstSwapIndices = (int *) malloc(numSwarms * numToSwap * sizeof(int));
+	cpuWorstSwapIndices = (int *) malloc(numSwarms * numToSwap * sizeof(int));
 
 	cudaMalloc((void **) &dFitness, numSwarms * numParticles * sizeof(float));
-	cudaMalloc((void **) &dBestSwapIndices, numSwarms * numToSwap * sizeof(float));
-	cudaMalloc((void **) &dWorstSwapIndices, numSwarms * numToSwap * sizeof(float));
+	cudaMalloc((void **) &dBestSwapIndices, numSwarms * numToSwap * sizeof(int));
+	cudaMalloc((void **) &dWorstSwapIndices, numSwarms * numToSwap * sizeof(int));
 
 	//Randomly generate our fitness data
 	for (i = 0; i < numSwarms * numParticles; i++)
 	{
-		hFitness[i] = rand() % 1000000 + rand() % 1000;
+		hFitness[i] = (float) (rand() % 100000 + rand() % 100000 + rand() % 1000 + rand() % 10 + rand() % 10);
 	}
 
 	//Push the fitness data to the GPU
@@ -101,8 +104,47 @@ int TestGenerateSwapIndices()
 		                                                                                                 dFitness, dBestSwapIndices, dWorstSwapIndices);
 	cudaThreadSynchronize();
 
-	cudaMemcpy(hBestSwapIndices, dBestSwapIndices, numSwarms * numToSwap * sizeof(float), cudaMemcpyDeviceToHost);
-	cudaMemcpy(hWorstSwapIndices, dWorstSwapIndices, numSwarms * numToSwap * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(hBestSwapIndices, dBestSwapIndices, numSwarms * numToSwap * sizeof(int), cudaMemcpyDeviceToHost);
+	cudaMemcpy(hWorstSwapIndices, dWorstSwapIndices, numSwarms * numToSwap * sizeof(int), cudaMemcpyDeviceToHost);
+
+	//Confirm the results...
+	for (i = 0; i < numSwarms; i++)
+	{
+		for (j = 0; j < numToSwap; j++)
+		{
+			found = 0;
+
+			//Search for this swap index...
+			for (k = 0; k < numToSwap && !found; k++)
+			{
+				if (hBestSwapIndices[i * numToSwap + j] == cpuBestSwapIndices[i * numToSwap + k])
+					found = 1;
+			}
+
+			if (!found)
+			{
+				printf("\t[ERROR] - GPU best swap #%d for swarm %d was: %d (expected: %d)\n", j, i, hBestSwapIndices[i * numToSwap + j], cpuBestSwapIndices[i * numToSwap + j]);
+				passed = 0;
+			}
+
+			found = false;
+
+			//Search for this swap index...
+			for (k = 0; k < numToSwap && !found; k++)
+			{
+				if (hWorstSwapIndices[i * numToSwap + j] == cpuWorstSwapIndices[i * numToSwap + k])
+					found = 1;
+			}
+
+			if (!found)
+			{
+				printf("\t[ERROR] - GPU worst swap #%d for swarm %d was: %d (expected: %d)\n", j, i, hWorstSwapIndices[i * numToSwap + j], cpuWorstSwapIndices[i * numToSwap + j]);
+				passed = 0;
+			}
+
+
+		}
+	}
 
 	PrintTestResults(passed);
 
