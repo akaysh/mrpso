@@ -14,4 +14,6 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *pBest, float *pBestPositions, float *gBest, float *gBestPositions,
 							float *position, float *fitness);
 
+__global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, float *bestSwapIndices, float *worstSwapIndices);
+
 #endif

@@ -13,6 +13,102 @@ int floatcomp(const void* elem1, const void* elem2)
     return *(const float*)elem1 > *(const float*)elem2;
 }
 
+void GenBestWorst(int count, int numToSwap, float *fitness, float *bestIndices, float *worstIndices)
+{
+	int i, j;
+	int currBestIndex, currWorstIndex;
+	float currBestValue, currWorstValue;
+	float *fitnessTemp;
+
+	fitnessTemp = (float *) malloc(count * sizeof(float));
+
+	memcpy(fitnessTemp, fitness, count * sizeof(float));
+
+	for (i = 0; i < numToSwap; i++)
+	{
+		currBestValue = 999999999.9f;
+		currWorstValue = -1.0f;
+
+		//Find the best and worst values.
+		for (j = 0; j < count; j++)
+		{
+			if (fitnessTemp[j] != -1.0f && fitnessTemp[j] < currBestValue)
+			{
+				currBestValue = fitnessTemp[j];
+				currBestIndex = j;
+			}
+
+			if (fitnessTemp[i] != -1.0f && fitnessTemp[j] > currWorstValue)
+			{
+				currWorstValue = fitnessTemp[j];
+				currWorstIndex = j;
+			}
+		}
+
+		bestIndices[i] = currBestIndex;
+		fitnessTemp[currBestIndex] = -1;
+
+		worstIndices[i] = currWorstIndex;
+		fitnessTemp[currWorstIndex] = -1;
+	}
+
+	free(fitnessTemp);
+}
+
+int TestGenerateSwapIndices()
+{
+	int passed = 1;
+	int i;
+	float *hFitness, *dFitness;
+	float *hBestSwapIndices, *dBestSwapIndices, *cpuBestSwapIndices;
+	float *hWorstSwapIndices, *dWorstSwapIndices, *cpuWorstSwapIndices;
+	int numSwarms, numParticles;
+	int numToSwap;
+
+	numSwarms = 1;
+	numParticles = 8;
+	numToSwap = 2;
+
+	srand((unsigned int) time(NULL));
+
+	hFitness = (float *) malloc(numSwarms * numParticles * sizeof(float));
+	hBestSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
+	cpuBestSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
+	hWorstSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
+	cpuWorstSwapIndices = (float *) malloc(numSwarms * numToSwap * sizeof(float));
+
+	cudaMalloc((void **) &dFitness, numSwarms * numParticles * sizeof(float));
+	cudaMalloc((void **) &dBestSwapIndices, numSwarms * numToSwap * sizeof(float));
+	cudaMalloc((void **) &dWorstSwapIndices, numSwarms * numToSwap * sizeof(float));
+
+	//Randomly generate our fitness data
+	for (i = 0; i < numSwarms * numParticles; i++)
+	{
+		hFitness[i] = rand() % 1000000 + rand() % 1000;
+	}
+
+	//Push the fitness data to the GPU
+	cudaMemcpy(dFitness, hFitness, numSwarms * numParticles * sizeof(float), cudaMemcpyHostToDevice);
+
+	//Compute the sequential reference solution.
+	for (i = 0; i < numSwarms; i++)
+	{
+		GenBestWorst(numParticles, numToSwap, &hFitness[i * numParticles], &cpuBestSwapIndices[i * numToSwap], &cpuWorstSwapIndices[i * numToSwap]);
+	}
+
+	//Compute the GPU solution
+	GenerateSwapIndices<<<numSwarms, numParticles, (numParticles * 5 + numToSwap * 2) * sizeof(float)>>>(numSwarms, numParticles, numToSwap, 
+		                                                                                                 dFitness, dBestSwapIndices, dWorstSwapIndices);
+	cudaThreadSynchronize();
+
+	cudaMemcpy(hBestSwapIndices, dBestSwapIndices, numSwarms * numToSwap * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(hWorstSwapIndices, dWorstSwapIndices, numSwarms * numToSwap * sizeof(float), cudaMemcpyDeviceToHost);
+
+	PrintTestResults(passed);
+
+	return passed;
+}
+
 int TestSwapParticles()
 {
 	int i, j, k, mySwarmOffset, previousSwarmOffset, neighborSwarmOffset, previousSwarmValue, neighborSwarmValue;
@@ -166,6 +262,18 @@ int TestSwapParticles()
 		}
 	}
 
+	free(hPosition);
+	free(hVelocity);
+	free(bestListing);
+	free(worstListing);
+	free(fitnesses);
+	free(particles);
+
+	cudaFree(dPosition);
+	cudaFree(dVelocity);
+	cudaFree(dBestSwapIndices);
+	cudaFree(dWorstSwapIndices);
+
 	PrintTestResults(passed);
 
 	return passed;
@@ -174,10 +282,12 @@ int TestSwapParticles()
 void RunSwapTests()
 {
 	int passed = 1;
+	int i;
 
 	printf("\nStarting GPU swap tests...\n\n");
 
 	passed &= TestSwapParticles();
+	passed &= TestGenerateSwapIndices();
 
 	if (passed)
 		printf("[PASSED] All swap tests passed!\n\n");
