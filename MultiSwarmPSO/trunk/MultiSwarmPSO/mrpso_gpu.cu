@@ -228,7 +228,7 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
  * @BLOCKDIM - Requires numParticles particles per thread block.
  * @SHAREDMEM - Requires numParticles * 5 + numToSwap * 2 elements of shared memory.
  */
-__global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, float *bestSwapIndices, float *worstSwapIndices)
+__global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, int *bestSwapIndices, int *worstSwapIndices)
 {
 	extern __shared__ float sharedFitnessOriginal[];
 	__shared__ float *sharedFitnessBest, *sharedFitnessWorst;
@@ -241,7 +241,7 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 	sharedFitnessWorst = &sharedFitnessBest[blockDim.x];
 	sharedTempIndicesBest = &sharedFitnessWorst[blockDim.x];
 	sharedTempIndicesWorst = &sharedTempIndicesBest[blockDim.x];	
-	sharedIndicesBest = &sharedFitnessWorst[blockDim.x];
+	sharedIndicesBest = &sharedTempIndicesWorst[blockDim.x];
 	sharedIndicesWorst = &sharedIndicesBest[numToSwap];	
 
 	//Push the fitness values for this swarm into shared memory
@@ -257,31 +257,22 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 	//Main loop to find the best/worst particles.
 	for (i = 0; i < numToSwap; i++)
 	{		
-		printf("Thread %d searching for best...\n", threadIdx.x);
-
 		for (j = blockDim.x / 2; j > 0; j >>= 1)
-		{
-			
+		{			
 			if (threadIdx.x < j)
 			{
 				if (sharedFitnessBest[threadIdx.x] == -1 ||
 					(sharedFitnessBest[threadIdx.x] > sharedFitnessBest[threadIdx.x + j] && sharedFitnessBest[threadIdx.x + j] != -1))
 				{
-					printf("Thread %d grabbing data %f to replace %f from (%d, %d)\n", threadIdx.x, sharedFitnessBest[threadIdx.x + j], sharedFitnessBest[threadIdx.x],
-																						threadIdx.x + j, threadIdx.x);
+					//printf("\t[[BEST]]Thread %d grabbing data %f to replace %f from (%d, %d)\n", threadIdx.x, sharedFitnessBest[threadIdx.x + j], sharedFitnessBest[threadIdx.x],
+																						//threadIdx.x + j, threadIdx.x);
 					sharedFitnessBest[threadIdx.x] = sharedFitnessBest[threadIdx.x + j];
 					sharedTempIndicesBest[threadIdx.x] = sharedTempIndicesBest[threadIdx.x + j];
 				}
 			}
 			
 			__syncthreads();
-
-			printf("we're finished here\n");
-			__syncthreads();
 		}
-
-		printf("Thread %d searching for worst...\n", threadIdx.x);
-		__syncthreads();
 
 		for (j = numParticles / 2; j > 0; j >>= 1)
 		{
@@ -290,8 +281,8 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 				if (sharedFitnessWorst[threadIdx.x] == -1 ||
 					(sharedFitnessWorst[threadIdx.x] < sharedFitnessWorst[threadIdx.x + j] && sharedFitnessWorst[threadIdx.x + j] != -1))
 				{				
-					printf("Thread %d grabbing data %f to replace %f from (%d, %d)\n", threadIdx.x, sharedFitnessWorst[threadIdx.x + j], sharedFitnessWorst[threadIdx.x],
-																						threadIdx.x + j, threadIdx.x);
+					//printf("\t[[WORST]]Thread %d grabbing data %f to replace %f from (%d, %d)\n", threadIdx.x, sharedFitnessWorst[threadIdx.x + j], sharedFitnessWorst[threadIdx.x],
+																						//threadIdx.x + j, threadIdx.x);
 					sharedFitnessWorst[threadIdx.x] = sharedFitnessWorst[threadIdx.x + j];
 					sharedTempIndicesWorst[threadIdx.x] = sharedTempIndicesWorst[threadIdx.x + j];
 				}
@@ -304,38 +295,34 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 		{
 			sharedIndicesBest[i] = sharedTempIndicesBest[0];
 			sharedIndicesWorst[i] = sharedTempIndicesWorst[0];
-		}
 
-		printf("We found the best value as %f at index %f\n", sharedFitnessBest[0], sharedIndicesBest[i]);
-		printf("We found the worst value as %f at index %f\n", sharedFitnessWorst[0], sharedIndicesWorst[i]);
+					//printf("We found the best %d value for swarm %d as %f at index %d\n", i, blockIdx.x, sharedFitnessBest[0], __float2int_rn(sharedIndicesBest[i]));
+		//printf("We found the worst %d value for swarm %d as %f at index %f\n", i, blockIdx.x, sharedFitnessWorst[0], __float2int_rn(sharedIndicesWorst[i]));
 
-		//Reset the temp indices and shared fitness values.
-		if (threadIdx.x < numParticles)
-		{	
-			sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
-			sharedFitnessWorst[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
-			sharedTempIndicesBest[threadIdx.x] = threadIdx.x;
-			sharedTempIndicesWorst[threadIdx.x] = threadIdx.x;
+			bestSwapIndices[blockIdx.x * numToSwap + i] = __float2int_rn(sharedIndicesBest[i]);
+			worstSwapIndices[blockIdx.x * numToSwap + i] = __float2int_rn(sharedIndicesWorst[i]);
+
+			//printf("Wrote out best value as %d to index %d\n", bestSwapIndices[blockDim.x * numToSwap + i], blockIdx.x * numToSwap + i);
 		}
 
 		if (threadIdx.x == 0)
 		{
-			sharedFitnessBest[(int) sharedIndicesBest[i]] = -1;
-			sharedFitnessWorst[(int) sharedIndicesWorst[i]] = -1;
-
-			printf("---------Replace values with %f %f--------------\n", sharedFitnessBest[(int) sharedIndicesBest[i]], sharedFitnessWorst[(int) sharedIndicesWorst[i]]);
+			sharedFitnessOriginal[__float2int_rz(sharedIndicesBest[i])] = -1.0f;
+			sharedFitnessOriginal[__float2int_rz(sharedIndicesWorst[i])] = -1.0f;
 		}
 
 		__syncthreads();
-	}//for...
-	
 
-	//Finally, write out the shared indices to global memory
-	if (threadIdx.x < numToSwap)
-	{
-		bestSwapIndices[blockDim.x * numToSwap + threadIdx.x] = sharedIndicesBest[threadIdx.x];
-		worstSwapIndices[blockDim.x * numToSwap + threadIdx.x] = sharedIndicesWorst[threadIdx.x];
-	}
+		sharedFitnessBest[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
+		sharedFitnessWorst[threadIdx.x] = sharedFitnessOriginal[threadIdx.x];
+
+		sharedTempIndicesBest[threadIdx.x] = threadIdx.x;
+		sharedTempIndicesWorst[threadIdx.x] = threadIdx.x;
+
+		__syncthreads();
+
+	}//for...
+
 }
 
 __device__ float ClampVelocity(int numMachines, float velocity)
