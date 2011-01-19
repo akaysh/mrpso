@@ -4,6 +4,7 @@
 #include <time.h>
 #include "curand.h"
 #include "helper.h"
+#include "gpu_pso.h"
 
 float *hPosition, *dPosition;
 
@@ -20,6 +21,8 @@ int *dBestSwapIndices, *dWorstSwapIndices;
 float *hRands, *dRands;
 
 float *hFitness, *dFitness;
+
+
 
 
 int numMachines, numTasks;
@@ -52,7 +55,7 @@ void AllocateGPUMemory(RunConfiguration *run)
 	cudaMalloc((void**) &dScratch, run->numParticles * run->numSwarms * numMachines * sizeof(float));
 	cudaMalloc((void**) &dBestSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
 	cudaMalloc((void**) &dWorstSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
-	cudaMalloc((void**) &dRands, initializationRandCount * iterationRandCount * sizeof(float));
+	cudaMalloc((void**) &dRands, initializationRandCount + iterationRandCount * sizeof(float));
 }
 
 /* FreeGPUMemory
@@ -116,8 +119,9 @@ RunConfiguration *LoadRunConfig(char *line)
 {
 	if (line != NULL)
 	{
-		sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d", &run->taskFile, &run->machineFile, &run->numSwarms, &run->numParticles, 
-			   &run->numIterations, &run->w, &run->wDecay, &run->c1, &run->c2, &run->iterationsBeforeSwap, &run->numParticlesToSwap);
+		sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d %d %d", &run->taskFile, &run->machineFile, &run->numSwarms, &run->numParticles, 
+			   &run->numIterations, &run->w, &run->wDecay, &run->c1, &run->c2, &run->iterationsBeforeSwap, &run->numParticlesToSwap, &run->threadsPerBlock, 
+			   &run->numTests);
 	}
 
 	return run;
@@ -136,6 +140,7 @@ RunConfiguration *GetNextRun()
 
 	FreeCPUMemory();
 	FreeGPUMemory();
+	ClearTexture();
 
 	if (runsFile != NULL)
 	{
@@ -169,6 +174,7 @@ RunConfiguration *GetNextRun()
 			BuildTaskList(run->taskFile);
 			GenerateETCMatrix();
 			AllocateGPUMemory(run);
+			InitTexture();
 		}
 	}
 	else

@@ -28,6 +28,8 @@ void RunPositionVelocityTests();
 void RunBestUpdateTests();
 void RunSwapTests();
 
+void TestMakespan(char *filename);
+
 void RunGPURandGenTests();
 
 void TestMRPSOCPUResults(char *filename);
