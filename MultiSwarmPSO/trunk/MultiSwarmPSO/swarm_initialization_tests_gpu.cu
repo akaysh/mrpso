@@ -11,7 +11,7 @@ int TestSwarmInitialization()
 	int passed = 1;
 	int numTasks, numMachines;
 	RunConfiguration *run;
-	float *hPosition, *dPosition, *cpuPosition;
+	float *hPosition, *dPosition, *dGbest, *dPBest, *cpuPosition;
 	float *hVelocity, *dVelocity, *cpuVelocity;
 	float *hRand, *dRand;
 	int numBlocks, threadsPerBlock;
@@ -38,6 +38,8 @@ int TestSwarmInitialization()
 	cudaMalloc((void**) &dPosition, run->numSwarms * run->numParticles * numTasks * sizeof(float));
 	cudaMalloc((void**) &dVelocity, run->numSwarms * run->numParticles * numTasks * sizeof(float));
 	cudaMalloc((void**) &dRand, run->numSwarms * run->numParticles * numTasks * 2 * sizeof(float));
+	cudaMalloc((void **) &dGBest, run->numSwarms * sizeof(float));
+	cudaMalloc((void **) &dPBest, run->numSwarms * run->numParticles * sizeof(float));
 
 	//Generate our random numbers on the GPU and transfer them back to the CPU.
 	GenerateRandsGPU(run->numSwarms * run->numParticles * numTasks * 2, dRand);
@@ -53,7 +55,7 @@ int TestSwarmInitialization()
 	}
 
 	//Have the GPU perform the initialization...
-	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms * run->numParticles, numTasks, numMachines, dPosition, dVelocity, dRand);
+	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dGBest, dPBest, dPosition, dVelocity, dRand);
 	cudaThreadSynchronize();
 
 	//Copy the GPU results back and compare them.
@@ -84,6 +86,8 @@ int TestSwarmInitialization()
 	cudaFree(dRand);
 	cudaFree(dPosition);
 	cudaFree(dVelocity);
+	cudaFree(dPBest);
+	cudaFree(dGBest);
 
 	PrintTestResults(passed);
 

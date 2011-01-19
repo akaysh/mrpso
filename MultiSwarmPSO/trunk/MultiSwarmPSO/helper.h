@@ -78,6 +78,7 @@ typedef struct
 	float c1;					//The local perturbation parameter.
 	float c2;					//The global perturbation parameter.
 	int threadsPerBlock;		//The number of threads per block to use for basic kernels.
+	int numTests;				//The number of tests to average the results by.
 } RunConfiguration;
 
 extern float *hETCMatrix;
@@ -129,5 +130,7 @@ extern int *dBestSwapIndices, *dWorstSwapIndices;
 extern float *hRands, *dRands;
 
 extern float *hFitness, *dFitness;
+
+extern int initializationRandCount, iterationRandCount;
 
 #endif

@@ -5,6 +5,7 @@
 #include "curand.h"
 
 texture<float, 2, cudaReadModeElementType> texETCMatrix;
+cudaArray *cuArray;
 
 extern __shared__ float sharedScratch[];
 
@@ -33,7 +34,7 @@ __device__ float CalcMakespanShared(int numTasks, int numMachines, float *matchi
 
 		if (val > makespan)
 			makespan = val;
-	}	
+	}		
 
 	return makespan;
 }
@@ -66,6 +67,8 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 			makespan = val;
 	}	
 
+	printf("Thread %d computed makespan %f\n", threadID, makespan);
+
 	return makespan;
 }
 
@@ -92,14 +95,17 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	int updateFitness;
 	int gBestIndex;
+	int tidNumTasks;
 
 	indexValues = &fitnessValues[blockDim.x];
+
+	tidNumTasks = threadID * numTasks;
 
 	//Push the fitness values for this swarm into shared memory
 	if (threadIdx.x < numParticles)
 	{	
 		fitnessValues[threadIdx.x] = fitness[threadID];
-		indexValues[threadIdx.x] = threadID * numTasks;
+		indexValues[threadIdx.x] = tidNumTasks;
 	}
 
 	//Each thread determines if they need to update their own pbest value.
@@ -110,7 +116,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 		
 		for (i = 0; i < numTasks; i++)
 		{
-			pBestPositions[threadID * numTasks + i] = position[threadID * numTasks + i];
+			pBestPositions[threadID * numTasks + i] = position[tidNumTasks + i];
 		}
 	}
 
@@ -151,7 +157,10 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 		}
 
 		if (threadIdx.x == 0)
+		{
+			printf("Found global  best value: %f\n", fitnessValues[0]);
 			gBest[blockIdx.x] = fitnessValues[0];
+		}
 	}
 }
 
@@ -160,11 +169,13 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
  * Initializes the position and velocity of the particles. Each thread is resposible
  * for a single dimension of a single particle.
  */
-__global__ void InitializeParticles(int totalParticles, int numTasks, int numMachines, float *position, float *velocity, float *randNums)
+__global__ void InitializeParticles(int numSwarms, int numParticles, int numTasks, int numMachines, float *gBests, float *pBests, float *position, 
+									float *velocity, float *randNums)
 {
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	float myRand1, myRand2;
 	int randOffset;
+	int totalParticles = __mul24(numSwarms, numParticles);
 
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
@@ -173,6 +184,12 @@ __global__ void InitializeParticles(int totalParticles, int numTasks, int numMac
 		myRand2 = randNums[threadID + randOffset];
 		position[threadID] = (numMachines - 1) * myRand1;	
 		velocity[threadID] = (numMachines >> 1) * myRand2;
+		pBests[threadID] = 99999999.99f;
+
+		if (threadID < numSwarms)
+		{
+			gBests[threadID] = 999999999.99f;
+		}
 	}
 }
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
@@ -386,17 +403,46 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	}
 }
 
+void InitTexture()
+{
+	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
+
+	texETCMatrix.normalized = false;
+	texETCMatrix.filterMode = cudaFilterModePoint;
+	texETCMatrix.addressMode[0] = cudaAddressModeClamp;
+    texETCMatrix.addressMode[1] = cudaAddressModeClamp;
+
+	cudaMallocArray(&cuArray, &channelDesc, GetNumMachines(), GetNumTasks());
+	cudaMemcpyToArray(cuArray, 0, 0, hETCMatrix, sizeof(float) * GetNumMachines() * GetNumTasks(), cudaMemcpyHostToDevice);
+	cudaBindTextureToArray(texETCMatrix, cuArray, channelDesc);
+}
+
+void ClearTexture()
+{
+	cudaUnbindTexture(texETCMatrix);
+	cudaFreeArray(cuArray);
+}
+
 
 float *MRPSODriver(RunConfiguration *run)
 {
-	int i;
-	float *matching = NULL;
-	int threadsPerBlock, numBlocks, numBlocksFitness;
+	int i, j;
+	int threadsPerBlock, threadsPerBlockSwap, numBlocks, numBlocksFitness, numBlocksSwap;
 	int fitnessRequired;
 	int totalComponents;
 	int numMachines, numTasks;
 	ArgStruct args;
+	float *gBests = NULL;
+	float *gBestsTemp;
+	float minVal;
 
+#ifdef RECORD_VALUES
+	gBests = (float *) malloc(run->numIterations * sizeof(float));
+	gBestsTemp = (float *) malloc(run->numSwarms * sizeof(float));
+#endif
+
+	numMachines = GetNumMachines();
+	numTasks = GetNumTasks();
 	threadsPerBlock = run->threadsPerBlock;
 	totalComponents = run->numSwarms * run->numParticles * numTasks;
 	fitnessRequired = run->numSwarms * run->numParticles;
@@ -410,39 +456,52 @@ float *MRPSODriver(RunConfiguration *run)
 
 	numBlocks = CalcNumBlocks(totalComponents, threadsPerBlock);
 	numBlocksFitness = CalcNumBlocks(fitnessRequired, 128);
+	threadsPerBlockSwap = 64;
+	numBlocksSwap = CalcNumBlocks(run->numSwarms * run->numParticlesToSwap, threadsPerBlockSwap);
 
 	//Initialize our particles.
-	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms * run->numParticles, numTasks, numMachines, dPosition, dVelocity, dRands);
-
-	//Update the Fitness for the first time...
-	UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
+	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dGBest, dPBest, dPosition, dVelocity, dRands);
 
 	//Run MRPSO GPU for the given number of iterations.
 	for (i = 1; i <= run->numIterations; i++)
 	{
-		//Update the Position and Velocity
-		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, i - 1, 
-																  dVelocity, dPosition, dPBestPosition, dGBestPosition, dRands, args);
 		//Update the Fitness
 		UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
 
 		//Update the local and swarm best positions
-		UpdateBests<<<run->numSwarms, run->numParticles>>>(run->numSwarms, run->numParticles, numTasks, dPBest, dPBestPosition, dGBest, dGBestPosition,
-														   dPosition, dFitness);
+		UpdateBests<<<run->numSwarms, run->numParticles, run->numParticles * 2 * sizeof(float)>>>(run->numSwarms, run->numParticles, numTasks, dPBest, 
+																							      dPBestPosition, dGBest, dGBestPosition,
+														                                          dPosition, dFitness);
+#ifdef RECORD_VALUES
+		cudaThreadSynchronize();
+		cudaMemcpy(gBestsTemp, dGBest, run->numSwarms * sizeof(float), cudaMemcpyDeviceToHost);
 
+		minVal = gBestsTemp[0];
+
+		//Find the minimal gbest value
+		for (j = 1; j < run->numSwarms; j++)
+		{
+			if (gBestsTemp[j] < minVal)
+				minVal = gBestsTemp[j];
+		}
+
+		gBests[i] = minVal;
+#endif
+
+		//Update the Position and Velocity
+		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, i - 1, 
+																  dVelocity, dPosition, dPBestPosition, dGBestPosition, dRands, args);	
 		if (i % run->iterationsBeforeSwap == 0)
 		{
 			//Build up the swap indices for each swarm
-
+			GenerateSwapIndices<<<run->numSwarms, run->numParticles>>>(run->numSwarms, run->numParticles, run->numParticlesToSwap, dFitness, dBestSwapIndices, dWorstSwapIndices);
 
 			//Swap particles between swarms
-			SwapBestParticles<<<1, 1024>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 
-				                           dWorstSwapIndices, dPosition, dVelocity);
-
-
+			SwapBestParticles<<<numBlocksSwap, threadsPerBlockSwap>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 
+																	  dWorstSwapIndices, dPosition, dVelocity);
 		}
 	}
 
-	return matching;
+	return gBests;
 }
 

@@ -123,7 +123,9 @@ int TestGenerateSwapIndices()
 
 			if (!found)
 			{
-				printf("\t[ERROR] - GPU best swap #%d for swarm %d was: %d (expected: %d)\n", j, i, hBestSwapIndices[i * numToSwap + j], cpuBestSwapIndices[i * numToSwap + j]);
+				printf("\t[ERROR] - GPU best swap #%d for swarm %d was: %d with fitness %f (expected: %d with fitness %f)\n", j, i, 
+					   hBestSwapIndices[i * numToSwap + j], hFitness[i * numParticles + hBestSwapIndices[i * numToSwap + j]], cpuBestSwapIndices[i * numToSwap + j],
+					   hFitness[i * numParticles + cpuBestSwapIndices[i * numToSwap + j]]);
 				passed = 0;
 			}
 
@@ -148,6 +150,16 @@ int TestGenerateSwapIndices()
 
 	PrintTestResults(passed);
 
+	free(hFitness);
+	free(hBestSwapIndices);
+	free(hWorstSwapIndices);
+	free(cpuBestSwapIndices);
+	free(cpuWorstSwapIndices);
+
+	cudaFree(dFitness);
+	cudaFree(dBestSwapIndices);
+	cudaFree(dWorstSwapIndices);
+
 	return passed;
 }
 
@@ -170,9 +182,9 @@ int TestSwapParticles()
 	int index;
 	int threadsPerBlock, numBlocks;	
 
-	numParticles = 5;
-	numToSwap = 2;
-	numSwarms = 2;
+	numParticles = 64;
+	numToSwap = 10;
+	numSwarms = 27;
 	numTasks = 10;
 	numMachines = 4;
 
@@ -196,7 +208,7 @@ int TestSwapParticles()
 	
 	for (i = 0; i < numParticles * numSwarms; i++)
 	{
-		fitnesses[i] = (rand() % 1000) + 1;
+		fitnesses[i] = (rand() % 10000000) + 1;
 		particles[i].fitness = fitnesses[i];
 	}
 
