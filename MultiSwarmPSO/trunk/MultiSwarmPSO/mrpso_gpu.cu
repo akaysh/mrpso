@@ -378,7 +378,7 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
 		//Two separate random numbers for every dimension for each particle each iteration.
-		randOffset = 1;//totalParticles * numTasks * iterationNum * 2 + (threadID * 2);
+		randOffset = totalParticles * numTasks * iterationNum * 2 + (threadID * 2);
 
 		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
 		//divided by this thread's threadID.
@@ -488,6 +488,7 @@ float *MRPSODriver(RunConfiguration *run)
 		gBests[i] = minVal;
 #endif
 
+		//REMINDER: The problem lies in the random number use after a certain number of iterations.
 		//Update the Position and Velocity
 		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, i - 1, 
 																  dVelocity, dPosition, dPBestPosition, dGBestPosition, dRands, args);	

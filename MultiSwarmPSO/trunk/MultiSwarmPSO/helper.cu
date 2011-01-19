@@ -43,7 +43,7 @@ int initializationRandCount, iterationRandCount;
 void AllocateGPUMemory(RunConfiguration *run)
 {
 	initializationRandCount = run->numSwarms * run->numParticles * numTasks * 2;
-	iterationRandCount = run->numParticles * run->numSwarms *  run->numIterations * 2;
+	iterationRandCount = run->numParticles * run->numSwarms * numTasks * run->numIterations * 2;
 
 	cudaMalloc((void**) &dPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dVelocity, run->numParticles * run->numSwarms * numTasks * sizeof(float));
