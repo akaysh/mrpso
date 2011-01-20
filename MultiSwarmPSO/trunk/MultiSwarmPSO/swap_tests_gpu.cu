@@ -169,6 +169,7 @@ int TestSwapParticles()
 	int passed = 1;
 	Particle *particles;
 	float *hPosition, *dPosition, *hVelocity, *dVelocity;
+	float *hPBest, *dPBest, *cpuPBest, *hPBestPosition, *dPBestPosition, *cpuPBestPosition;
 	int *bestListing;
 	int *worstListing;
 	int *dBestSwapIndices, *dWorstSwapIndices;
@@ -192,6 +193,10 @@ int TestSwapParticles()
 
 	hPosition = (float *) malloc(numParticles * numSwarms * numTasks * sizeof(float));
 	hVelocity = (float *) malloc(numParticles * numSwarms * numTasks * sizeof(float));
+	hPBest = (float *) malloc(numParticles * numSwarms * sizeof(float));
+	cpuPBest = (float *) malloc(numParticles * numSwarms * sizeof(float));
+	hPBestPosition = (float *) malloc(numParticles * numSwarms * numTasks * sizeof(float));
+	cpuPBestPosition = (float *) malloc(numParticles * numSwarms * numTasks * sizeof(float));
 	bestListing = (int *) malloc(numToSwap * numSwarms * sizeof(int));
 	worstListing = (int *) malloc(numToSwap * numSwarms * sizeof(int));
 	fitnesses = (float *) malloc(numParticles * numSwarms * sizeof(float));
@@ -200,6 +205,8 @@ int TestSwapParticles()
 	cudaMalloc((void **) &dVelocity, numParticles * numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void **) &dBestSwapIndices, numToSwap * numSwarms * sizeof(int));
 	cudaMalloc((void **) &dWorstSwapIndices, numToSwap * numSwarms * sizeof(int));
+	cudaMalloc((void **) &dPBest, numParticles * numSwarms * sizeof(float));
+	cudaMalloc((void **) &dPBestPosition, numParticles * numSwarms * numTasks * sizeof(float));
 
 	srand((unsigned int) time(NULL));
 
@@ -262,6 +269,7 @@ int TestSwapParticles()
 			{
 				hPosition[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
 				hVelocity[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
+				hPBestPosition[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
 			}
 		}
 	}
@@ -269,18 +277,23 @@ int TestSwapParticles()
 	//Copy the memory over to the GPU
 	cudaMemcpy(dPosition, hPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(dVelocity, hVelocity, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dPBestPosition, hPBestPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(dPBest, hPBest, numParticles * numSwarms * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(dBestSwapIndices, bestListing, numToSwap * numSwarms * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(dWorstSwapIndices, worstListing, numToSwap * numSwarms * sizeof(int), cudaMemcpyHostToDevice);
 
 	threadsPerBlock = 32;
 	numBlocks = CalcNumBlocks(numSwarms * numToSwap, threadsPerBlock);
 
-	SwapBestParticles<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numTasks, numToSwap, dBestSwapIndices, dWorstSwapIndices, dPosition, dVelocity);
+	SwapBestParticles<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numTasks, numToSwap, dBestSwapIndices, 
+		                                              dWorstSwapIndices, dPosition, dVelocity, dPBest, dPBestPosition);
 	cudaThreadSynchronize();
 
 	//Copy the data back
 	cudaMemcpy(hPosition, dPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(hVelocity, dVelocity, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(hPBestPosition, dPBestPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(hPBest, dPBest, numParticles * numSwarms * sizeof(float), cudaMemcpyDeviceToHost);
 
 	//Ensure that the correct modified numbers were added.
 	for (i = 0; i < numSwarms; i++)
@@ -312,6 +325,13 @@ int TestSwapParticles()
 						                          hVelocity[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
+
+				if(abs(hPBestPosition[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				{
+					printf("\t[ERROR] - GPU PBest value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+						                          hPBestPosition[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
+					passed = 0;
+				}
 			}
 		}
 	}
@@ -322,11 +342,17 @@ int TestSwapParticles()
 	free(worstListing);
 	free(fitnesses);
 	free(particles);
+	free(hPBest);
+	free(cpuPBest);
+	free(cpuPBestPosition);
+	free(hPBestPosition);
 
 	cudaFree(dPosition);
 	cudaFree(dVelocity);
 	cudaFree(dBestSwapIndices);
 	cudaFree(dWorstSwapIndices);
+	cudaFree(dPBest);
+	cudaFree(dPBestPosition);
 
 	PrintTestResults(passed);
 

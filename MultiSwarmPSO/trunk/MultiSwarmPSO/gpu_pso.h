@@ -10,8 +10,8 @@ void ClearTexture();
 __global__ void InitializeParticles(int numSwarms, int numParticles, int numTasks, int numMachines, float *gBests, float *pBests, float *position, 
 									float *velocity, float *randNums);
 
-__global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, 
-								  int *worstSwapIndices, float *position, float *velocity);
+__global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, 
+								  float *position, float *velocity, float *pBest, float *pBestPosition);
 
 __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
 										  float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args);

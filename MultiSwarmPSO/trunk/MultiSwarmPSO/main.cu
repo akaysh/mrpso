@@ -31,9 +31,9 @@ int main(int argc, char* argv[])
 
 	//RunGPURandGenTests();
 	
-	//RunGPUCorrectnessTests();
+	RunGPUCorrectnessTests();
 
-	TestMakespan("runs.txt");
+	//TestMakespan("runs.txt");
 
 
 	getchar();
