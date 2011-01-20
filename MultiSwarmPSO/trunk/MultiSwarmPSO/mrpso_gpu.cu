@@ -158,7 +158,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 
 		if (threadIdx.x == 0)
 		{
-			printf("Found global  best value: %f\n", fitnessValues[0]);
+			//printf("Found global  best value: %f\n", fitnessValues[0]);
 			gBest[blockIdx.x] = fitnessValues[0];
 		}
 	}
@@ -184,21 +184,26 @@ __global__ void InitializeParticles(int numSwarms, int numParticles, int numTask
 		myRand2 = randNums[threadID + randOffset];
 		position[threadID] = (numMachines - 1) * myRand1;	
 		velocity[threadID] = (numMachines >> 1) * myRand2;
-		pBests[threadID] = 99999999.99f;
-
-		if (threadID < numSwarms)
+		
+		if (threadID < totalParticles)
 		{
-			gBests[threadID] = 999999999.99f;
+			pBests[threadID] = 99999999.99f;
+
+			if (threadID < numSwarms)
+			{
+				gBests[threadID] = 999999999.99f;
+			}
 		}
 	}
 }
-__global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, float *position, float *velocity)
+__global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, 
+								  float *position, float *velocity, float *pBest, float *pBestPosition)
 {
 	int i;
 	int bestIndex, worstIndex;
 	int neighbor;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-	float tempPosition, tempVelocity;
+	float tempPosition, tempVelocity, tempPBestPosition;
 	int mySwarm, myIndex;
 	int mySwarmIndex, neighborSwarmIndex;
 
@@ -225,14 +230,17 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 			//Store our velocities (the best values)
 			tempPosition = position[bestIndex + i];
 			tempVelocity = velocity[bestIndex + i];
+			tempPBestPosition = pBestPosition[bestIndex + i];
 
 			//Swap the other swarm's worst into our best
 			position[bestIndex + i] = position[worstIndex + i];
 			velocity[bestIndex + i] = velocity[worstIndex + i];
+			pBestPosition[bestIndex + i] = pBestPosition[worstIndex + i];
 
 			//Finally swap our best values into the other swarm's worst
 			position[worstIndex + i] = tempPosition;
 			velocity[worstIndex + i] = tempVelocity;
+			pBestPosition[worstIndex + i] = tempPBestPosition;
 		}
 	}
 }
@@ -503,7 +511,7 @@ float *MRPSODriver(RunConfiguration *run)
 
 			//Swap particles between swarms
 			SwapBestParticles<<<numBlocksSwap, threadsPerBlockSwap>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 
-																	  dWorstSwapIndices, dPosition, dVelocity);
+																	  dWorstSwapIndices, dPosition, dVelocity, dPBest, dPBestPosition);
 		}
 	}
 

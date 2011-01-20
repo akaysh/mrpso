@@ -87,7 +87,7 @@ void GenerateRandsGPU(int total, float *deviceMem)
 	int numRands;
 	curandGenerator_t gen1;
 
-	numRands = total > 0 ? total : initializationRandCount * iterationRandCount;
+	numRands = total > 0 ? total : initializationRandCount + iterationRandCount;
 
 	curandCreateGenerator(&gen1, CURAND_RNG_PSEUDO_XORWOW);
 	curandSetPseudoRandomGeneratorSeed(gen1, (unsigned int) time(NULL));
