@@ -183,10 +183,10 @@ int TestSwapParticles()
 	int index;
 	int threadsPerBlock, numBlocks;	
 
-	numParticles = 64;
-	numToSwap = 10;
-	numSwarms = 27;
-	numTasks = 10;
+	numParticles = 4;
+	numToSwap = 2;
+	numSwarms = 2;
+	numTasks = 2;
 	numMachines = 4;
 
 	printf("\tRunning particle swap test...\n");
@@ -265,6 +265,8 @@ int TestSwapParticles()
 	{
 		for (j = 0; j < numParticles; j++)
 		{
+			hPBest[(i * numParticles) + j] = (float) i;
+
 			for (k = 0; k < numTasks; k++)
 			{
 				hPosition[(i * numParticles * numTasks) + j * numTasks + k] = (float) i;
@@ -282,8 +284,8 @@ int TestSwapParticles()
 	cudaMemcpy(dBestSwapIndices, bestListing, numToSwap * numSwarms * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(dWorstSwapIndices, worstListing, numToSwap * numSwarms * sizeof(int), cudaMemcpyHostToDevice);
 
-	threadsPerBlock = 32;
-	numBlocks = CalcNumBlocks(numSwarms * numToSwap, threadsPerBlock);
+	threadsPerBlock = 64;
+	numBlocks = CalcNumBlocks(numSwarms * numToSwap * numTasks, threadsPerBlock);
 
 	SwapBestParticles<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numTasks, numToSwap, dBestSwapIndices, 
 		                                              dWorstSwapIndices, dPosition, dVelocity, dPBest, dPBestPosition);
@@ -298,6 +300,7 @@ int TestSwapParticles()
 	//Ensure that the correct modified numbers were added.
 	for (i = 0; i < numSwarms; i++)
 	{
+		/*
 		mySwarmOffset = i * numParticles * numTasks;
 
 		previousSwarmValue = i != 0 ? i - 1 : numSwarms - 1;
@@ -334,6 +337,7 @@ int TestSwapParticles()
 				}
 			}
 		}
+		*/
 	}
 
 	free(hPosition);
