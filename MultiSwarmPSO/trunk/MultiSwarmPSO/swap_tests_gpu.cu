@@ -186,7 +186,7 @@ int TestSwapParticles()
 	numParticles = 4;
 	numToSwap = 2;
 	numSwarms = 2;
-	numTasks = 2;
+	numTasks = 3;
 	numMachines = 4;
 
 	printf("\tRunning particle swap test...\n");
@@ -300,7 +300,7 @@ int TestSwapParticles()
 	//Ensure that the correct modified numbers were added.
 	for (i = 0; i < numSwarms; i++)
 	{
-		/*
+		
 		mySwarmOffset = i * numParticles * numTasks;
 
 		previousSwarmValue = i != 0 ? i - 1 : numSwarms - 1;
@@ -317,14 +317,14 @@ int TestSwapParticles()
 			{
 				if(abs(hPosition[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("\t[ERROR] - GPU Position value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+					printf("\t[ERROR] - GPU Position value for swarm %d, particle %d, element %d was: %f (expected: %f)\n", i, bestListing[j], k,
 						                          hPosition[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
 
 				if(abs(hVelocity[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("\t[ERROR] - GPU Velocity value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
+					printf("\t[ERROR] - GPU Velocity value for swarm %d, particle %d, element %d was: %f (expected: %f)\n", i, bestListing[j], k,
 						                          hVelocity[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
@@ -337,7 +337,7 @@ int TestSwapParticles()
 				}
 			}
 		}
-		*/
+		
 	}
 
 	free(hPosition);

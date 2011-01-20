@@ -222,26 +222,24 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 		mySwapIndicesBase = mySwarm * (numToSwap);
 		neighborSwapIndicesBase = neighbor * (numToSwap);
 
-		//printf("t %d has myswap %d, neig %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase);
+		
 
 		//Now let's figure out which actual swap within this swap we're responsible for as there's numToSwap choices!
 		//And, while we're at it, figure out what dimension we're covering.
-		mySwapIndex = (threadID / numToSwap) % numToSwap;
-		neighborSwapIndex = neighbor > 0 ? mySwapIndex : (threadID / numTasks) % numTasks;
+		mySwapIndex = (threadID / numTasks) % numToSwap;
+		neighborSwapIndex = neighbor > 0 ? mySwapIndex : (threadID / numTasks) % numToSwap;
 		myDimension = (threadID % numTasks);
 		//printf("thread id %d dimension is %d\n", threadID, myDimension);
+
+		printf("t %d has myswap %d, neig %d with mySwapIndex of %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase, mySwapIndex);
 
 		//Finally let's get our indices!!
 		bestIndex = (mySwarm * numParticles * numTasks) + (bestSwapIndices[mySwapIndicesBase + mySwapIndex] * numTasks);
 		worstIndex = (neighbor * numParticles * numTasks) + (worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex] * numTasks);
 
-//printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
-printf("Thread %d will be taking from %d and putting in %d\n", threadID, bestIndex + myDimension, worstIndex + myDimension);
+printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
+//printf("Thread %d will be taking from %d and putting in %d\n", threadID, bestIndex + myDimension, worstIndex + myDimension);
 
-		
-
-		//printf("Thread %d, in swarm %d is covering particle %d, dimension %d and swapping position %f with position %f in swarm %d\n", 
-		//	   threadID, mySwarm, bestIndex, myIndex, position[bestIndex + myIndex], position[worstIndex + myIndex], neighbor);
 
 		//Store the best positions temporarily.
 		tempPosition = position[bestIndex + myDimension];
