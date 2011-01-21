@@ -201,12 +201,10 @@ __global__ void InitializeParticles(int numSwarms, int numParticles, int numTask
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, 
 								  float *position, float *velocity, float *pBest, float *pBestPosition)
 {
-	int i;
 	int bestIndex, worstIndex;
 	int neighbor;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	float tempPosition, tempVelocity, tempPBestPosition;
-
 	int mySwarm, mySwapIndex, neighborSwapIndex;
 	int mySwapIndicesBase, neighborSwapIndicesBase;
 	int myDimension;
@@ -231,27 +229,27 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 		//printf("t %d has myswap %d, neig %d with mySwapIndex of %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase, mySwapIndex);
 
 		//Finally let's get our indices!!
-		bestIndex = (mySwarm * numParticles * numTasks) + (bestSwapIndices[mySwapIndicesBase + mySwapIndex] * numTasks);
-		worstIndex = (neighbor * numParticles * numTasks) + (worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex] * numTasks);
+		bestIndex = (mySwarm * numParticles * numTasks) + (bestSwapIndices[mySwapIndicesBase + mySwapIndex] * numTasks) + myDimension;
+		worstIndex = (neighbor * numParticles * numTasks) + (worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex] * numTasks) + myDimension;
 
 //printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
 //printf("Thread %d will be taking from %d and putting in %d\n", threadID, bestIndex + myDimension, worstIndex + myDimension);
 
 
 		//Store the best positions temporarily.
-		tempPosition = position[bestIndex + myDimension];
-		tempVelocity = velocity[bestIndex + myDimension];
-		tempPBestPosition = pBestPosition[bestIndex + myDimension];
+		tempPosition = position[bestIndex];
+		tempVelocity = velocity[bestIndex];
+		tempPBestPosition = pBestPosition[bestIndex];
 
 		//Swap the other swarm's worst into our best
-		position[bestIndex + myDimension] = position[worstIndex + myDimension];
-		velocity[bestIndex + myDimension] = velocity[worstIndex + myDimension];
-		pBestPosition[bestIndex + myDimension] = pBestPosition[worstIndex + myDimension];
+		position[bestIndex] = position[worstIndex];
+		velocity[bestIndex] = velocity[worstIndex];
+		pBestPosition[bestIndex] = pBestPosition[worstIndex];
 
 		//Finally swap our best values into the other swarm's worst
-		position[worstIndex + myDimension] = tempPosition;
-		velocity[worstIndex + myDimension] = tempVelocity;
-		pBestPosition[worstIndex + myDimension] = tempPBestPosition;
+		position[worstIndex] = tempPosition;
+		velocity[worstIndex] = tempVelocity;
+		pBestPosition[worstIndex] = tempPBestPosition;
 
 		//Update the pBest value...
 		if (threadID < numSwarms * numToSwap)
@@ -270,56 +268,6 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 			pBest[worstIndex] = tempPosition;
 		}
 		
-	}
-}
-
-
-__global__ void SwapBestParticles1(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, 
-								  float *position, float *velocity, float *pBest, float *pBestPosition)
-{
-	int i;
-	int bestIndex, worstIndex;
-	int neighbor;
-	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-	float tempPosition, tempVelocity, tempPBestPosition;
-	int mySwarm, myIndex;
-	int mySwarmIndex, neighborSwarmIndex;
-
-	if (threadID < __mul24(numSwarms, numToSwap))
-	{		
-		//Determine which swarm this thread is covering.
-		mySwarm = threadID / numToSwap;
-		neighbor = mySwarm < numSwarms - 1 ? mySwarm + 1 : 0;
-		mySwarmIndex = __mul24(mySwarm, numToSwap);
-		neighborSwarmIndex = __mul24(neighbor, numToSwap);
-
-		//The actual index within this swarm is the remainer of threadID / numToSwap
-		myIndex = threadID % numToSwap;	
-
-		//Compute the starting indices for the best and worst locations.
-		bestIndex = mySwarm * numParticles * numTasks + __mul24(bestSwapIndices[mySwarmIndex + myIndex], numTasks);
-		worstIndex = neighbor * numParticles * numTasks + __mul24(worstSwapIndices[neighborSwarmIndex + myIndex], numTasks);
-		
-		//Each of our threads that have work to do will swap all of the dimensions of 
-		//one of the 'best' particles for its swarm with the corresponding 'worst'
-		//particle of its neighboring swarm.
-		for (i = 0; i < numTasks; i++)
-		{
-			//Store our velocities (the best values)
-			tempPosition = position[bestIndex + i];
-			tempVelocity = velocity[bestIndex + i];
-			tempPBestPosition = pBestPosition[bestIndex + i];
-
-			//Swap the other swarm's worst into our best
-			position[bestIndex + i] = position[worstIndex + i];
-			velocity[bestIndex + i] = velocity[worstIndex + i];
-			pBestPosition[bestIndex + i] = pBestPosition[worstIndex + i];
-
-			//Finally swap our best values into the other swarm's worst
-			position[worstIndex + i] = tempPosition;
-			velocity[worstIndex + i] = tempVelocity;
-			pBestPosition[worstIndex + i] = tempPBestPosition;
-		}
 	}
 }
 
