@@ -212,17 +212,14 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 	int myDimension;
 
 	if (threadID < numSwarms * numToSwap * numTasks)
-	{		
-
+	{	
 		//First, figure out what swarm we are covering and who our neighbor is...
 		mySwarm = threadID / (numToSwap * numTasks);
 		neighbor = mySwarm < numSwarms - 1? mySwarm + 1 : 0;
 
 		//Now, figure out what our starting index is into the swap indices (numToSwap records for each swarm)
 		mySwapIndicesBase = mySwarm * (numToSwap);
-		neighborSwapIndicesBase = neighbor * (numToSwap);
-
-		
+		neighborSwapIndicesBase = neighbor * (numToSwap);		
 
 		//Now let's figure out which actual swap within this swap we're responsible for as there's numToSwap choices!
 		//And, while we're at it, figure out what dimension we're covering.
@@ -231,13 +228,13 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 		myDimension = (threadID % numTasks);
 		//printf("thread id %d dimension is %d\n", threadID, myDimension);
 
-		printf("t %d has myswap %d, neig %d with mySwapIndex of %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase, mySwapIndex);
+		//printf("t %d has myswap %d, neig %d with mySwapIndex of %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase, mySwapIndex);
 
 		//Finally let's get our indices!!
 		bestIndex = (mySwarm * numParticles * numTasks) + (bestSwapIndices[mySwapIndicesBase + mySwapIndex] * numTasks);
 		worstIndex = (neighbor * numParticles * numTasks) + (worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex] * numTasks);
 
-printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
+//printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
 //printf("Thread %d will be taking from %d and putting in %d\n", threadID, bestIndex + myDimension, worstIndex + myDimension);
 
 
