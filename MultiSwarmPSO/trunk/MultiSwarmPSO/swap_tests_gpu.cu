@@ -180,13 +180,14 @@ int TestSwapParticles()
 	int numTasks;
 	int numMachines;
 	float currFitness;
+	int swapIndex;
 	int index;
 	int threadsPerBlock, numBlocks;	
 
-	numParticles = 4;
-	numToSwap = 2;
-	numSwarms = 2;
-	numTasks = 3;
+	numParticles = 64;
+	numToSwap = 10;
+	numSwarms = 30;
+	numTasks = 80;
 	numMachines = 4;
 
 	printf("\tRunning particle swap test...\n");
@@ -297,48 +298,69 @@ int TestSwapParticles()
 	cudaMemcpy(hPBestPosition, dPBestPosition, numParticles * numSwarms * numTasks * sizeof(float), cudaMemcpyDeviceToHost);
 	cudaMemcpy(hPBest, dPBest, numParticles * numSwarms * sizeof(float), cudaMemcpyDeviceToHost);
 
-	//Ensure that the correct modified numbers were added.
+	//Check that the swaps were performed correctly for each swarm.
 	for (i = 0; i < numSwarms; i++)
 	{
-		
 		mySwarmOffset = i * numParticles * numTasks;
 
 		previousSwarmValue = i != 0 ? i - 1 : numSwarms - 1;
-		previousSwarmOffset = previousSwarmValue * numParticles * numTasks;
-
 		neighborSwarmValue = i < numSwarms - 1 ? i + 1 : 0;
-		neighborSwarmOffset = neighborSwarmValue * numParticles * numTasks;
 
-		//For this swarm ensure our 'best' particles position and velocity values are now equal to our neighboring swarm's values.
-		//				 ensure our 'worst' particles position and velocity values are now equal to the "previous" swarm's values.
+		//Check that this swarm's 'best' positions, velocity, and pbestpositions have the values of the neighboring swarm.
+		//Also we want to ensure that this swarm's 'worst' values have the values of the previous swarm.
 		for (j = 0; j < numToSwap; j++)
-		{
+		{		
+			swapIndex = (i * numToSwap) + j;
+
+			//Ensure each dimension of the position, velocity and pBestPosition match the expected values as described above.
 			for (k = 0; k < numTasks; k++)
 			{
-				if(abs(hPosition[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				if (abs(hPosition[mySwarmOffset + (bestListing[swapIndex] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("\t[ERROR] - GPU Position value for swarm %d, particle %d, element %d was: %f (expected: %f)\n", i, bestListing[j], k,
-						                          hPosition[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
+					printf("\t[ERROR] - GPU best swap position value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[swapIndex], k,
+						                          hPosition[mySwarmOffset + (bestListing[swapIndex] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
 
-				if(abs(hVelocity[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				if (abs(hPosition[mySwarmOffset + (worstListing[swapIndex] * numTasks) + k] - previousSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("\t[ERROR] - GPU Velocity value for swarm %d, particle %d, element %d was: %f (expected: %f)\n", i, bestListing[j], k,
-						                          hVelocity[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
+					printf("\t[ERROR] - GPU worst swap position value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, worstListing[swapIndex], k,
+						                          hPosition[mySwarmOffset + (worstListing[swapIndex] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
 
-				if(abs(hPBestPosition[mySwarmOffset + (bestListing[j + (i * numToSwap)] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				if (abs(hVelocity[mySwarmOffset + (bestListing[swapIndex] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
 				{
-					printf("\t[ERROR] - GPU PBest value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[j], k,
-						                          hPBestPosition[mySwarmOffset + (bestListing[j * (i * numToSwap)] * numTasks) + k], neighborSwarmValue);
+					printf("\t[ERROR] - GPU best swap velocity value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[swapIndex], k,
+						                          hVelocity[mySwarmOffset + (bestListing[swapIndex] * numTasks) + k], neighborSwarmValue);
+					passed = 0;
+				}
+
+				if (abs(hVelocity[mySwarmOffset + (worstListing[swapIndex] * numTasks) + k] - previousSwarmValue) > ACCEPTED_DELTA)
+				{
+					printf("\t[ERROR] - GPU worst swap velocity value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, worstListing[swapIndex], k,
+						                          hVelocity[mySwarmOffset + (worstListing[swapIndex] * numTasks) + k], neighborSwarmValue);
+					passed = 0;
+				}
+
+				if (abs(hPBestPosition[mySwarmOffset + (bestListing[swapIndex] * numTasks) + k] - neighborSwarmValue) > ACCEPTED_DELTA)
+				{
+					printf("\t[ERROR] - GPU best swap PBestPosition value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, bestListing[swapIndex], k,
+						                          hPBestPosition[mySwarmOffset + (bestListing[swapIndex] * numTasks) + k], neighborSwarmValue);
+					passed = 0;
+				}
+
+				if (abs(hPBestPosition[mySwarmOffset + (worstListing[swapIndex] * numTasks) + k] - previousSwarmValue) > ACCEPTED_DELTA)
+				{
+					printf("\t[ERROR] - GPU best swap PBestPosition value for swarm %d, particle %d, element %d was: %f (expected: %d)\n", i, worstListing[swapIndex], k,
+						                          hPBestPosition[mySwarmOffset + (worstListing[swapIndex] * numTasks) + k], neighborSwarmValue);
 					passed = 0;
 				}
 			}
 		}
-		
 	}
+
+	
 
 	free(hPosition);
 	free(hVelocity);
