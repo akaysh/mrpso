@@ -5,7 +5,6 @@
 
 void TestMRPSOCPUResults(char *filename)
 {
-	int i;
 	int opened;
 	FILE *outFile;
 	float *data;
