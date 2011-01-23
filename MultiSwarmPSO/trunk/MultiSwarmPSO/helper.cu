@@ -22,9 +22,6 @@ float *hRands, *dRands;
 
 float *hFitness, *dFitness;
 
-
-
-
 int numMachines, numTasks;
 
 float *hETCMatrix = NULL;
@@ -35,6 +32,8 @@ FILE *runsFile;
 RunConfiguration *run = NULL;
 
 int initializationRandCount, iterationRandCount;
+
+curandGenerator_t randGenGPU;
 
 /* AllocateGPUMemory
  *
@@ -77,10 +76,31 @@ void FreeGPUMemory()
 	cudaFree(dRands);
 }
 
+void InitRandsGPU()
+{
+	curandCreateGenerator(&randGenGPU, CURAND_RNG_PSEUDO_XORWOW);
+	curandSetPseudoRandomGeneratorSeed(randGenGPU, (unsigned int) time(NULL));
+}
+
+void FreeRandsGPU()
+{
+	curandDestroyGenerator(randGenGPU);
+
+	//Reset the stack size to get our memory back for sm_20 until this bug is fixed.
+	cudaThreadSetLimit(cudaLimitStackSize, 1024);
+}
+
+void GenRandsGPU(int numToGen, float *deviceMem)
+{
+	curandGenerateUniform(randGenGPU, deviceMem, numToGen);
+}
+
 /* GenerateRandsGPU
  *
  * Generates all of the GPU random numbers required for the
  * given run configuration.
+ *
+ * For legacy purposes (unit tests).
  */
 void GenerateRandsGPU(int total, float *deviceMem)
 {

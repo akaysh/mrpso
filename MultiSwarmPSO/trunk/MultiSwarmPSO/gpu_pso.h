@@ -13,7 +13,7 @@ __global__ void InitializeParticles(int numSwarms, int numParticles, int numTask
 __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks, int numToSwap, int *bestSwapIndices, int *worstSwapIndices, 
 								  float *position, float *velocity, float *pBest, float *pBestPosition);
 
-__global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
+__global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, 
 										  float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args);
 
 __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float *pBest, float *pBestPositions, float *gBest, float *gBestPositions,
