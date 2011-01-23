@@ -10,7 +10,6 @@ void UpdateVelocityPosition(int numSwarms, int numParticles, int numTasks, int n
 {
 	int i, j, k;
 	int particleOffset;
-	int randOffset;
 	float newVelocity;	
 	
 	for (i = 0; i < numSwarms; i++)
@@ -98,11 +97,11 @@ int TestUpdateVelocityAndPosition()
 	{
 		for (j = 0; j < numTasks; j++)
 		{
-			hPBestPosition[i * numTasks + j] = rand() % numMachines;
+			hPBestPosition[i * numTasks + j] = (float) (rand() % numMachines);
 			cpuPBestPosition[i * numTasks + j] = hPBestPosition[i * numTasks + j];
 
-			hPosition[i * numTasks + j] = rand() % numMachines;
-			hVelocity[i * numTasks + j] = rand() % numMachines;
+			hPosition[i * numTasks + j] = (float) (rand() % numMachines);
+			hVelocity[i * numTasks + j] = (float) (rand() % numMachines);
 
 			cpuPosition[i * numTasks + j] = hPosition[i * numTasks + j];
 			cpuVelocity[i * numTasks + j] = hVelocity[i * numTasks + j];
@@ -114,7 +113,7 @@ int TestUpdateVelocityAndPosition()
 	{
 		for (j = 0; j < numTasks; j++)
 		{
-			hGBestPosition[i * numTasks + j] = rand() % numMachines;
+			hGBestPosition[i * numTasks + j] = (float) (rand() % numMachines);
 			cpuGBestPosition[i * numTasks + j] = hGBestPosition[i * numTasks + j];
 		}
 	}	
