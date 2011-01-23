@@ -5,6 +5,8 @@
 
 #include <cuda_runtime.h>
 
+#define MAX_RAND_GEN 419430400
+
 typedef enum VELOCITY_UPDATE_STYLE
 {
 	BASIC,		//Continuous PSO
@@ -114,6 +116,9 @@ bool InitCUDA();
 void AllocateGPUMemory(RunConfiguration *run);
 void FreeGPUMemory();
 void GenerateRandsGPU(int total, float *deviceMem);
+void InitRandsGPU();
+void FreeRandsGPU();
+void GenRandsGPU(int numToGen, float *deviceMem);
 
 extern float *hPosition, *dPosition;
 

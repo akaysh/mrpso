@@ -369,6 +369,11 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 
 }
 
+/* ClampVelocity
+ *
+ * Clamps a particle's velocity along one dimension to the
+ * prescribed level (currently: half of the number of machines)
+ */
 __device__ float ClampVelocity(int numMachines, float velocity)
 {
 	float clamp = 0.5f * numMachines;
@@ -381,6 +386,11 @@ __device__ float ClampVelocity(int numMachines, float velocity)
 	return velocity;
 }
 
+/* ClampPosition
+ *
+ * Clamps a particle's position along one dimension ensuring
+ * it cannot go outside the valid bounds of the solution space: [0, numMachines - 1].
+ */
 __device__ float ClampPosition(int numMachines, float position)
 {
 	if (position < 0.0f)
@@ -391,7 +401,7 @@ __device__ float ClampPosition(int numMachines, float position)
 	return position;
 }
 
-__global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, int iterationNum, float *velocity, float *position, 
+__global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, 
 										  float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args)
 {
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
@@ -405,7 +415,7 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
 		//Two separate random numbers for every dimension for each particle each iteration.
-		randOffset = totalParticles * numTasks * iterationNum * 2 + (threadID * 2);
+		randOffset = threadID * 2;
 
 		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
 		//divided by this thread's threadID.
@@ -450,6 +460,27 @@ void ClearTexture()
 	cudaFreeArray(cuArray);
 }
 
+/* GenerateRandomNumbers
+ *
+ * Generates as many iterations worth of random numbers such that the overall size
+ * of random numbers generated does not exceed maxGen.
+ *
+ * Returns the number of iterations covered by this generation of random numbers.
+ */
+int GenerateRandomNumbers(int totalParticles, int numTasks, int iterationsRemaining, int maxGen, float *dRand)
+{
+	int totalRandsPerIter;
+	int numIterationsCovered;
+
+	totalRandsPerIter = totalParticles * numTasks * 2;
+
+	numIterationsCovered = maxGen / (totalRandsPerIter * sizeof(float));
+	numIterationsCovered = numIterationsCovered == 0 ? 1 : numIterationsCovered;
+
+	GenRandsGPU(totalRandsPerIter * numIterationsCovered, dRand);
+
+	return numIterationsCovered;
+}
 
 float *MRPSODriver(RunConfiguration *run)
 {
@@ -479,6 +510,8 @@ float *MRPSODriver(RunConfiguration *run)
 	args.z = run->c1;
 	args.w = run->c2;
 
+	InitRandsGPU();
+
 	numMachines = GetNumMachines();
 	numTasks = GetNumTasks();
 
@@ -489,12 +522,17 @@ float *MRPSODriver(RunConfiguration *run)
 	threadsPerBlockSwap = 64;
 	numBlocksSwap = CalcNumBlocks(run->numSwarms * run->numParticlesToSwap, threadsPerBlockSwap);
 
+	//Generate the random numbers we need for the initialization...
+
 	//Initialize our particles.
 	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dGBest, dPBest, dPosition, dVelocity, dRands);
 
 	//Run MRPSO GPU for the given number of iterations.
 	for (i = 1; i <= run->numIterations; i++)
 	{
+		//If we need to generate more random numbers then do so now...
+
+
 		//Update the Fitness
 		UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
 
@@ -537,6 +575,8 @@ float *MRPSODriver(RunConfiguration *run)
 																	  dWorstSwapIndices, dPosition, dVelocity, dPBest, dPBestPosition);
 		}
 	}
+
+	FreeRandsGPU();
 
 	return gBests;
 }
