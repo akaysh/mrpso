@@ -67,7 +67,7 @@ __device__ float CalcMakespan(int numTasks, int numMachines, float *matching, fl
 			makespan = val;
 	}	
 
-	printf("Thread %d computed makespan %f\n", threadID, makespan);
+//	printf("Thread %d computed makespan %f\n", threadID, makespan);
 
 	return makespan;
 }
@@ -462,6 +462,7 @@ float *MRPSODriver(RunConfiguration *run)
 	float *gBests = NULL;
 	float *gBestsTemp;
 	float minVal;
+	int swapSharedMem;
 
 #ifdef RECORD_VALUES
 	gBests = (float *) malloc(run->numIterations * sizeof(float));
@@ -480,6 +481,8 @@ float *MRPSODriver(RunConfiguration *run)
 
 	numMachines = GetNumMachines();
 	numTasks = GetNumTasks();
+
+	swapSharedMem = (run->numParticles * 5 + run->numParticlesToSwap * 2) * sizeof(float);
 
 	numBlocks = CalcNumBlocks(totalComponents, threadsPerBlock);
 	numBlocksFitness = CalcNumBlocks(fitnessRequired, 128);
@@ -512,7 +515,7 @@ float *MRPSODriver(RunConfiguration *run)
 				minVal = gBestsTemp[j];
 		}
 
-		gBests[i] = minVal;
+		gBests[i - 1] = minVal;
 #endif
 
 		//REMINDER: The problem lies in the random number use after a certain number of iterations.
@@ -526,7 +529,8 @@ float *MRPSODriver(RunConfiguration *run)
 		if (i % run->iterationsBeforeSwap == 0)
 		{
 			//Build up the swap indices for each swarm
-			GenerateSwapIndices<<<run->numSwarms, run->numParticles>>>(run->numSwarms, run->numParticles, run->numParticlesToSwap, dFitness, dBestSwapIndices, dWorstSwapIndices);
+			GenerateSwapIndices<<<run->numSwarms, run->numParticles, swapSharedMem>>>(run->numSwarms, run->numParticles, run->numParticlesToSwap, 
+			                                                                          dFitness, dBestSwapIndices, dWorstSwapIndices);
 
 			//Swap particles between swarms
 			SwapBestParticles<<<numBlocksSwap, threadsPerBlockSwap>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 

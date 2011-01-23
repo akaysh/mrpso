@@ -7,36 +7,26 @@
 
 int main(int argc, char* argv[])
 {
-	/*
-	OpenRunsFile(argv[1]);
-
-	run = GetNextRun();
-
-	RunMRPSO(run);
-
-	data = GetRecordedData();
-
-	best = data[run->numIterations - 1];
-
-	for (i = 1; i < run->numSwarms; i++)
-		if (best > data[(run->numIterations * i + 1) - 1])
-			best = data[(run->numIterations * i + 1) - 1];
-
-	printf("Best value found: %f\n", best);
-	*/
-
-	//TestTex();
-
 	//TestGPUMatch();
 
 	//RunGPURandGenTests();
+
+	//printf((cudaGetErrorString(cudaGetLastError())));
+	//InitCUDA();
 	
-	RunGPUCorrectnessTests();
+	//RunGPUCorrectnessTests();
 
-	//TestMakespan("runs.txt");
+	InitCUDA();
 
+	TestMakespan("runs.txt");
 
-	getchar();
+	
+
+	//getchar();
+
+	printf((cudaGetErrorString(cudaGetLastError())));
+
+	
 
 	return 0;
 }
