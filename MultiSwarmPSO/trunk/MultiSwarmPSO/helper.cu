@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include "cuda.h"
 #include "curand.h"
 #include "helper.h"
 #include "gpu_pso.h"
@@ -41,9 +42,8 @@ curandGenerator_t randGenGPU;
  */
 void AllocateGPUMemory(RunConfiguration *run)
 {
-	initializationRandCount = run->numSwarms * run->numParticles * numTasks * 2;
-	iterationRandCount = run->numParticles * run->numSwarms * numTasks * run->numIterations * 2;
-
+	//initializationRandCount = run->numSwarms * run->numParticles * numTasks * 2;
+	//iterationRandCount = run->numParticles * run->numSwarms * numTasks * run->numIterations * 2;
 	cudaMalloc((void**) &dPosition, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dVelocity, run->numParticles * run->numSwarms * numTasks * sizeof(float));
 	cudaMalloc((void**) &dFitness, run->numParticles * run->numSwarms * sizeof(float));
@@ -54,7 +54,7 @@ void AllocateGPUMemory(RunConfiguration *run)
 	cudaMalloc((void**) &dScratch, run->numParticles * run->numSwarms * numMachines * sizeof(float));
 	cudaMalloc((void**) &dBestSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
 	cudaMalloc((void**) &dWorstSwapIndices, run->numSwarms * run->numParticlesToSwap * sizeof(int));
-	cudaMalloc((void**) &dRands, initializationRandCount + iterationRandCount * sizeof(float));
+	cudaMalloc((void**) &dRands, MAX_RAND_GEN * sizeof(float));
 }
 
 /* FreeGPUMemory
@@ -78,8 +78,18 @@ void FreeGPUMemory()
 
 void InitRandsGPU()
 {
+	unsigned int free, total;
+
+	cuMemGetInfo(&free, &total);
+
+	printf("Free memory: %d, total: %d\n", free, total);
 	curandCreateGenerator(&randGenGPU, CURAND_RNG_PSEUDO_XORWOW);
 	curandSetPseudoRandomGeneratorSeed(randGenGPU, (unsigned int) time(NULL));
+	cudaThreadSetLimit(cudaLimitStackSize, 1024);
+
+	cuMemGetInfo(&free, &total);
+
+	printf("Free memory: %d, total: %d\n", free, total);
 }
 
 void FreeRandsGPU()

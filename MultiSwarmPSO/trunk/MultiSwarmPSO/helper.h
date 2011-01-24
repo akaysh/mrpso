@@ -5,7 +5,7 @@
 
 #include <cuda_runtime.h>
 
-#define MAX_RAND_GEN 419430400
+#define MAX_RAND_GEN 52428800
 
 typedef enum VELOCITY_UPDATE_STYLE
 {
