@@ -24,9 +24,5 @@ int main(int argc, char* argv[])
 
 	//getchar();
 
-	printf((cudaGetErrorString(cudaGetLastError())));
-
-	
-
 	return 0;
 }

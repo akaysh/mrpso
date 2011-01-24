@@ -76,6 +76,7 @@ __global__ void UpdateFitness(int numSwarms, int numParticles, int numTasks, int
 {
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 
+	//If we have enough 
 	if (threadID < __mul24(numSwarms, numParticles))
 		fitness[threadID] = CalcMakespan(numTasks, numMachines, position, scratch);
 }

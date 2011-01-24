@@ -120,12 +120,14 @@
 			/>
 			<Tool
 				Name="CUDA Build Rule"
+				AdditionalOptions=""
 				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
 				Debug="true"
 				Arch="20"
-				Defines=""
-				Optimization="0"
-				RuntimeChecks="3"
+				ExtraNvccOptions="-Xptxas -v"
+				Keep="true"
+				Optimization="2"
+				RuntimeChecks="0"
 				Runtime="1"
 			/>
 			<Tool
