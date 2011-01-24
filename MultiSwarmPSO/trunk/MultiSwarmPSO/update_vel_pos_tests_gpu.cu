@@ -130,7 +130,7 @@ int TestUpdateVelocityAndPosition()
 						    cpuPBestPosition, cpuGBestPosition, w, c1, c2);
 
 	//Compute the GPU solution
-	UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numMachines, numTasks, 0, dVelocity, dPosition, 
+	UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(numSwarms, numParticles, numMachines, numTasks, dVelocity, dPosition, 
 																	 dPBestPosition, dGBestPosition, dRand, arg);
 	cudaThreadSynchronize();
 

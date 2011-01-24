@@ -122,7 +122,7 @@
 				Name="CUDA Build Rule"
 				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
 				Debug="true"
-				Arch="13"
+				Arch="20"
 				Defines=""
 				Optimization="0"
 				RuntimeChecks="3"
@@ -159,7 +159,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="cudart.lib cutil32D.lib curand.lib cudpp32D.lib"
+				AdditionalDependencies="cudart.lib cutil32D.lib curand.lib cudpp32D.lib cuda.lib"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="$(CUDA_LIB_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\lib"

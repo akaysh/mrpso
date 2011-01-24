@@ -467,15 +467,16 @@ void ClearTexture()
  *
  * Returns the number of iterations covered by this generation of random numbers.
  */
-int GenerateRandomNumbers(int totalParticles, int numTasks, int iterationsRemaining, int maxGen, float *dRand)
+int GenerateRandomNumbers(int totalParticles, int numTasks, int iterationsRemaining, float *dRand)
 {
 	int totalRandsPerIter;
 	int numIterationsCovered;
 
 	totalRandsPerIter = totalParticles * numTasks * 2;
 
-	numIterationsCovered = maxGen / (totalRandsPerIter * sizeof(float));
+	numIterationsCovered = MAX_RAND_GEN / (totalRandsPerIter * sizeof(float));
 	numIterationsCovered = numIterationsCovered == 0 ? 1 : numIterationsCovered;
+	numIterationsCovered = numIterationsCovered > iterationsRemaining ? iterationsRemaining : numIterationsCovered;
 
 	GenRandsGPU(totalRandsPerIter * numIterationsCovered, dRand);
 
@@ -494,6 +495,9 @@ float *MRPSODriver(RunConfiguration *run)
 	float *gBestsTemp;
 	float minVal;
 	int swapSharedMem;
+	int itersOfRands;
+	int itersOfRandsLeft;
+	int dRandsOffset;
 
 #ifdef RECORD_VALUES
 	gBests = (float *) malloc(run->numIterations * sizeof(float));
@@ -510,8 +514,6 @@ float *MRPSODriver(RunConfiguration *run)
 	args.z = run->c1;
 	args.w = run->c2;
 
-	InitRandsGPU();
-
 	numMachines = GetNumMachines();
 	numTasks = GetNumTasks();
 
@@ -523,15 +525,24 @@ float *MRPSODriver(RunConfiguration *run)
 	numBlocksSwap = CalcNumBlocks(run->numSwarms * run->numParticlesToSwap, threadsPerBlockSwap);
 
 	//Generate the random numbers we need for the initialization...
+	InitRandsGPU();
+	printf((cudaGetErrorString(cudaGetLastError())));
+	GenRandsGPU(run->numSwarms * run->numParticles * numTasks * 2, dRands);
 
 	//Initialize our particles.
 	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dGBest, dPBest, dPosition, dVelocity, dRands);
+
+	itersOfRandsLeft = 0;
 
 	//Run MRPSO GPU for the given number of iterations.
 	for (i = 1; i <= run->numIterations; i++)
 	{
 		//If we need to generate more random numbers then do so now...
-
+		if (!itersOfRandsLeft)
+		{
+			itersOfRands = GenerateRandomNumbers(run->numSwarms * run->numParticles, numTasks, run->numIterations - i + 1, dRands);
+			itersOfRandsLeft = itersOfRands;
+		}
 
 		//Update the Fitness
 		UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
@@ -558,8 +569,9 @@ float *MRPSODriver(RunConfiguration *run)
 
 		//REMINDER: The problem lies in the random number use after a certain number of iterations.
 		//Update the Position and Velocity
-		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, i - 1, 
-																  dVelocity, dPosition, dPBestPosition, dGBestPosition, dRands, args);	
+		dRandsOffset = (itersOfRands - itersOfRandsLeft) * run->numSwarms * run->numParticles * numTasks * 2;
+		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, 
+																  dVelocity, dPosition, dPBestPosition, dGBestPosition, &dRands[dRandsOffset], args);	
 
 		if (args.x > 0.0f)
 			args.x *= run->wDecay;
@@ -574,6 +586,8 @@ float *MRPSODriver(RunConfiguration *run)
 			SwapBestParticles<<<numBlocksSwap, threadsPerBlockSwap>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 
 																	  dWorstSwapIndices, dPosition, dVelocity, dPBest, dPBestPosition);
 		}
+
+		itersOfRandsLeft--;
 	}
 
 	FreeRandsGPU();

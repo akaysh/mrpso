@@ -18,7 +18,6 @@ void TestMakespan(char *filename)
 	{
 		for (i = 0; i < run->numTests; i++)
 		{
-			GenerateRandsGPU(initializationRandCount + iterationRandCount, dRands);
 			MRPSODriver(run);
 		}
 
