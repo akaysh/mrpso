@@ -172,6 +172,9 @@ RunConfiguration *GetNextRun()
 	FreeGPUMemory();
 	ClearTexture();
 
+	if (run == NULL)
+		run = (RunConfiguration *) malloc(sizeof(RunConfiguration));
+
 	if (runsFile != NULL)
 	{
 		while (!done && fgets(line, sizeof line, runsFile) != NULL)
@@ -180,21 +183,23 @@ RunConfiguration *GetNextRun()
 				done = true;
 		}
 
-		if (run != NULL)
-		{
-			free(run);
-			run = NULL;
-		}
+		//if (run != NULL)
+		//{
+		//	free(run);
+		//	run = NULL;
+		//}
 
-		run = (RunConfiguration *) malloc(sizeof(RunConfiguration));
+		//run = (RunConfiguration *) malloc(sizeof(RunConfiguration));
 
 		if (!done && feof(runsFile))
 		{
-			if (run != NULL)
-			{
-				free(run);
-				run = NULL;
-			}
+			//if (run != NULL)
+			//{
+			//	free(run);
+			//	run = NULL;
+			//}
+
+			run->numSwarms = -1;
 		}
 		else
 		{
@@ -208,11 +213,14 @@ RunConfiguration *GetNextRun()
 		}
 	}
 	else
-		if (run != NULL)
-		{
-			free(run);
-			run = NULL;
-		}
+	{
+		//if (run != NULL)
+		//{
+		//	free(run);
+		//	run = NULL;			
+		//}
+		run->numSwarms = -1;
+	}
 
 	return run;
 }

@@ -14,11 +14,12 @@ void TestMakespan(char *filename)
 
 	run = GetNextRun();
 
-	while (run != NULL)
+	while (run->numSwarms != -1)
 	{
 		for (i = 0; i < run->numTests; i++)
 		{
 			MRPSODriver(run);
+			run = GetNextRun();
 		}
 
 
