@@ -47,6 +47,7 @@ void TestMakespan(char *filename)
 			totalTime += cutGetTimerValue(timer);
 		}
 
+
 		printf("Total time: %.3f ms\n", totalTime / run->numTests);
 		run = GetNextRun();
 
