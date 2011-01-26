@@ -126,8 +126,8 @@
 				Arch="20"
 				ExtraNvccOptions="-Xptxas -v"
 				Keep="true"
-				Optimization="2"
-				RuntimeChecks="0"
+				Optimization="0"
+				RuntimeChecks="3"
 				Runtime="1"
 			/>
 			<Tool
@@ -733,7 +733,7 @@
 						>
 					</File>
 					<File
-						RelativePath=".\makespan_tests_gpu.cu"
+						RelativePath=".\makespan_test_gpu.cu"
 						>
 					</File>
 					<File
@@ -788,11 +788,19 @@
 			>
 		</Filter>
 		<File
+			RelativePath=".\machines2.txt"
+			>
+		</File>
+		<File
 			RelativePath=".\machines8.txt"
 			>
 		</File>
 		<File
 			RelativePath=".\runs.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\tasks4.txt"
 			>
 		</File>
 		<File

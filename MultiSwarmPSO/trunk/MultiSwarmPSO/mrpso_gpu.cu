@@ -39,35 +39,34 @@ __device__ float CalcMakespanShared(int numTasks, int numMachines, float *matchi
 	return makespan;
 }
 
-__device__ float CalcMakespan(int numTasks, int numMachines, float *matching, float *scratch)
+__device__ float CalcMakespan(int numParticles, int numTasks, int numMachines, float *matching, float *scratch)
 {
 	int i;
+	int swarmOffset, scratchOffset;
 	float makespan;
-	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-	int taskOffset, machineOffset;
 	float matchingVal;
 	float val;
 	
-	makespan = 0.0f;
-	taskOffset = __mul24(threadID, numTasks);
-	machineOffset = __mul24(threadID, numMachines);
+	//The position values that this thread needs to retrieve are located at its swarm offset (mySwarm * numParticles * numTasks)
+	//and we add i * numParticles as the offset at each point in the for loop.
+	swarmOffset = blockIdx.x * numParticles * numTasks;
+	scratchOffset = blockIdx.x * numParticles * numMachines;
 
-	//Clear our scratch table
-	for (i = 0; i < numTasks; i++)
-		scratch[machineOffset + (int) floorf(matching[taskOffset + i])] = 0.0f;
+	makespan = 0.0f;
+
+	//Clear our scratch table+
+	for (i = 0; i < numMachines; i++)
+		scratch[scratchOffset + (i * numParticles) + threadIdx.x] = 0.0f;
 
 	for (i = 0; i < numTasks; i++)
 	{
-		matchingVal = matching[taskOffset + i];
-
-		scratch[machineOffset + (int) floorf(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
-		val = scratch[machineOffset + (int) floorf(matchingVal)];
+		matchingVal = matching[swarmOffset + (i * numParticles) + threadIdx.x];
+		scratch[scratchOffset + (int) (floorf(matchingVal) * numParticles) + threadIdx.x] += tex2D(texETCMatrix, matchingVal, (float) i);
+		val = scratch[scratchOffset + (int) (floorf(matchingVal) * numParticles) + threadIdx.x];
 
 		if (val > makespan)
 			makespan = val;
 	}	
-
-//	printf("Thread %d computed makespan %f\n", threadID, makespan);
 
 	return makespan;
 }
@@ -78,7 +77,7 @@ __global__ void UpdateFitness(int numSwarms, int numParticles, int numTasks, int
 
 	//If we have enough 
 	if (threadID < __mul24(numSwarms, numParticles))
-		fitness[threadID] = CalcMakespan(numTasks, numMachines, position, scratch);
+		fitness[threadID] = CalcMakespan(numParticles, numTasks, numMachines, position, scratch);
 }
 
 /* UpdateBests
