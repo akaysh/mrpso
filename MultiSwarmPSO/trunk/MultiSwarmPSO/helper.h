@@ -120,6 +120,8 @@ void InitRandsGPU();
 void FreeRandsGPU();
 void GenRandsGPU(int numToGen, float *deviceMem);
 
+void ResetTimers();
+
 extern float *hPosition, *dPosition;
 
 extern float *hVelocity, *dVelocity;
@@ -137,5 +139,7 @@ extern float *hRands, *dRands;
 extern float *hFitness, *dFitness;
 
 extern int initializationRandCount, iterationRandCount;
+
+extern float initTime, swapTime, determineSwapTime, findBestsTime, updatePosVelTime, fitnessTime;
 
 #endif

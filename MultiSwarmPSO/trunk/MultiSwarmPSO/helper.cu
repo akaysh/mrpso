@@ -34,7 +34,19 @@ RunConfiguration *run = NULL;
 
 int initializationRandCount, iterationRandCount;
 
+float initTime, swapTime, determineSwapTime, findBestsTime, updatePosVelTime, fitnessTime;
+
 curandGenerator_t randGenGPU;
+
+void ResetTimers()
+{
+	initTime = 0.0f;
+	swapTime = 0.0f;
+	determineSwapTime = 0.0f;
+	findBestsTime = 0.0f;
+	updatePosVelTime = 0.0f;
+	fitnessTime = 0.0f;
+}
 
 /* AllocateGPUMemory
  *
@@ -80,16 +92,9 @@ void InitRandsGPU()
 {
 	unsigned int free, total;
 
-	cuMemGetInfo(&free, &total);
-
-	printf("Free memory: %d, total: %d\n", free, total);
 	curandCreateGenerator(&randGenGPU, CURAND_RNG_PSEUDO_XORWOW);
 	curandSetPseudoRandomGeneratorSeed(randGenGPU, (unsigned int) time(NULL));
 	cudaThreadSetLimit(cudaLimitStackSize, 1024);
-
-	cuMemGetInfo(&free, &total);
-
-	printf("Free memory: %d, total: %d\n", free, total);
 }
 
 void FreeRandsGPU()
@@ -168,10 +173,6 @@ RunConfiguration *GetNextRun()
 	int done = 0;
 	char line[512];
 
-	FreeCPUMemory();
-	FreeGPUMemory();
-	ClearTexture();
-
 	if (run == NULL)
 		run = (RunConfiguration *) malloc(sizeof(RunConfiguration));
 
@@ -183,42 +184,17 @@ RunConfiguration *GetNextRun()
 				done = true;
 		}
 
-		//if (run != NULL)
-		//{
-		//	free(run);
-		//	run = NULL;
-		//}
-
-		//run = (RunConfiguration *) malloc(sizeof(RunConfiguration));
-
 		if (!done && feof(runsFile))
 		{
-			//if (run != NULL)
-			//{
-			//	free(run);
-			//	run = NULL;
-			//}
-
 			run->numSwarms = -1;
 		}
 		else
 		{
 			LoadRunConfig(line);
-
-			BuildMachineList(run->machineFile);
-			BuildTaskList(run->taskFile);
-			GenerateETCMatrix();
-			AllocateGPUMemory(run);
-			InitTexture();
 		}
 	}
 	else
 	{
-		//if (run != NULL)
-		//{
-		//	free(run);
-		//	run = NULL;			
-		//}
 		run->numSwarms = -1;
 	}
 
