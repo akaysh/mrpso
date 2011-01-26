@@ -57,21 +57,21 @@ __global__ void TestMakespan(int numTasks, int numMachines, int numMatchings, fl
 
 int TestGPUMakespan()
 {
-	int i;
+	int i, j, k;
 	int passed = 1;
-	cudaArray *cuArray;
 	float *dOut, *matching, *scratch;
 	float *hMatching, *hScratch;
 	int numMatchings;
 	int threadsPerBlock, numBlocks;
 	float *cpuMakespans, *gpuMakespans;
+	float *tempMatching;
 	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
 
 	BuildMachineList("machines8.txt");
 	BuildTaskList("tasks80.txt");
 	GenerateETCMatrix();
 
-	numMatchings = 128;
+	numMatchings = 1024;
 	threadsPerBlock = 64;
 	numBlocks = CalcNumBlocks(numMatchings, threadsPerBlock);
 
@@ -83,32 +83,34 @@ int TestGPUMakespan()
 	hScratch = (float *) calloc(numMatchings * GetNumMachines(), sizeof(float));
 	cpuMakespans = (float *) malloc(numMatchings * sizeof(float));
 	gpuMakespans = (float *) malloc(numMatchings * sizeof(float));
+	tempMatching = (float *) malloc(GetNumTasks() * sizeof(float));
 
 	for (i = 0; i < numMatchings * GetNumTasks(); i++)
 		hMatching[i] = (float) (rand() % (GetNumMachines() * 100)) / 100.0f;
 
 	//Compute the makespans on the CPU
-	for (i = 0; i < numMatchings; i++)
-		cpuMakespans[i] = ComputeMakespan(&hMatching[i * GetNumTasks()], GetNumTasks());
+	for (i = 0; i < numBlocks; i++)
+	{
+		for (j = 0; j < threadsPerBlock; j++)
+		{
+			for (k = 0; k < GetNumTasks(); k++)
+			{
+				tempMatching[k] =  hMatching[i * threadsPerBlock * GetNumTasks() + k * threadsPerBlock + j];
+			}
+			cpuMakespans[i * threadsPerBlock + j] = ComputeMakespan(tempMatching, GetNumTasks());
+		}		
+	}
 
 	cudaMalloc((void **)&dOut, sizeof(float) * numMatchings );
 	cudaMalloc((void **)&matching, sizeof(float) * numMatchings * GetNumTasks() );
 	cudaMalloc((void **)&scratch, sizeof(float) * numMatchings * GetNumMachines() );
 
-	texETCMatrix.normalized = false;
-	texETCMatrix.filterMode = cudaFilterModePoint;
-	texETCMatrix.addressMode[0] = cudaAddressModeClamp;
-    texETCMatrix.addressMode[1] = cudaAddressModeClamp;
-
-
-	cudaMallocArray(&cuArray, &channelDesc, GetNumMachines(), GetNumTasks());
-	cudaMemcpyToArray(cuArray, 0, 0, hETCMatrix, sizeof(float)*GetNumMachines() *GetNumTasks(), cudaMemcpyHostToDevice);
-	cudaBindTextureToArray(texETCMatrix, cuArray, channelDesc);
+	InitTexture();
 
 	cudaMemcpy(matching, hMatching, sizeof(float) * numMatchings * GetNumTasks(), cudaMemcpyHostToDevice);
 	cudaMemcpy(scratch, hScratch, sizeof(float) * numMatchings * GetNumMachines(), cudaMemcpyHostToDevice);
 
-	TestMakespan<<<numBlocks, threadsPerBlock>>>(GetNumTasks(), GetNumMachines(), numMatchings, matching, scratch, dOut);
+	UpdateFitness<<<numBlocks, threadsPerBlock>>>(numBlocks, threadsPerBlock, GetNumTasks(), GetNumMachines(), matching, scratch, dOut);
 	cudaThreadSynchronize();
 
 	cudaMemcpy(gpuMakespans, dOut, sizeof(float) * numMatchings , cudaMemcpyDeviceToHost);
@@ -131,7 +133,6 @@ int TestGPUMakespan()
 	cudaFree(dOut);
 	cudaFree(matching);
 	cudaFree(scratch);
-	cudaFreeArray(cuArray);
 
 	return passed;
 }

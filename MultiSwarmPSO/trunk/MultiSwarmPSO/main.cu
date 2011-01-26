@@ -14,15 +14,15 @@ int main(int argc, char* argv[])
 	//printf((cudaGetErrorString(cudaGetLastError())));
 	//InitCUDA();
 	
-	//RunGPUCorrectnessTests();
+	RunGPUCorrectnessTests();
 
-	InitCUDA();
+	//InitCUDA();
 
-	TestMakespan("runs.txt");
+	//TestMakespan("runs.txt");
 
 	
 
-	//getchar();
+	getchar();
 
 	return 0;
 }
