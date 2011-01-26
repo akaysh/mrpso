@@ -1,4 +1,4 @@
 #File describing various runs for the PSO algorithms.
 #Format is:
 #	task_file, machine_file, num_swarms, num_particles, num_iterations, w, w_decay, c1, c2, iterations_before_swap, num_particles_to_swap, threadsPerBlock, numTests
-tasks80.txt machines8.txt 10 128 1000 1.0 0.995 2.0 1.4 10 10 128 1
+tasks80.txt machines8.txt 10 128 1000 1.0 0.995 2.0 1.4 10 10 512 10

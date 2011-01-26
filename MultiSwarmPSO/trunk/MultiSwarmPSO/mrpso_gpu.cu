@@ -500,6 +500,14 @@ float *MRPSODriver(RunConfiguration *run)
 	int itersOfRandsLeft;
 	int dRandsOffset;
 
+#ifdef KERNEL_TIMING
+	cudaEvent_t start, stop;
+	float elapsedTime;
+
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+#endif
+
 #ifdef RECORD_VALUES
 	gBests = (float *) malloc(run->numIterations * sizeof(float));
 	gBestsTemp = (float *) malloc(run->numSwarms * sizeof(float));
@@ -527,11 +535,21 @@ float *MRPSODriver(RunConfiguration *run)
 
 	//Generate the random numbers we need for the initialization...
 	InitRandsGPU();
-	printf((cudaGetErrorString(cudaGetLastError())));
 	GenRandsGPU(run->numSwarms * run->numParticles * numTasks * 2, dRands);
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
 
 	//Initialize our particles.
 	InitializeParticles<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dGBest, dPBest, dPosition, dVelocity, dRands);
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	initTime += elapsedTime;
+#endif
 
 	itersOfRandsLeft = 0;
 
