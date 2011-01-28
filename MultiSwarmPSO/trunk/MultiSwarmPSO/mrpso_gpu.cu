@@ -105,7 +105,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	if (threadIdx.x < numParticles)
 	{	
 		fitnessValues[threadIdx.x] = fitness[threadID];
-		indexValues[threadIdx.x] = tidNumTasks;
+		indexValues[threadIdx.x] = threadIdx.x;
 	}
 
 	//Each thread determines if they need to update their own pbest value.
@@ -116,7 +116,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 		
 		for (i = 0; i < numTasks; i++)
 		{
-			pBestPositions[threadID * numTasks + i] = position[tidNumTasks + i];
+			pBestPositions[blockIdx.x * numParticles * numTasks + i * numParticles + threadIdx.x] = position[blockIdx.x * numParticles * numTasks + i * numParticles + threadIdx.x];
 		}
 	}
 
@@ -153,7 +153,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	{
 		for (i = threadIdx.x; i < numTasks; i += blockDim.x)
 		{
-			gBestPositions[blockIdx.x * numTasks + i] = pBestPositions[(int) indexValues[0] + i];			
+			gBestPositions[blockIdx.x * numTasks + i] = pBestPositions[blockIdx.x * numParticles * numTasks  + i * numParticles + (int) indexValues[0]];			
 		}
 
 		if (threadIdx.x == 0)
@@ -229,8 +229,8 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 		//printf("t %d has myswap %d, neig %d with mySwapIndex of %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase, mySwapIndex);
 
 		//Finally let's get our indices!!
-		bestIndex = (mySwarm * numParticles * numTasks) + (bestSwapIndices[mySwapIndicesBase + mySwapIndex] * numTasks) + myDimension;
-		worstIndex = (neighbor * numParticles * numTasks) + (worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex] * numTasks) + myDimension;
+		bestIndex = (mySwarm * numParticles * numTasks) + myDimension * numParticles + bestSwapIndices[mySwapIndicesBase + mySwapIndex];
+		worstIndex = (neighbor * numParticles * numTasks) + myDimension * numParticles + worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex];
 
 //printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
 //printf("Thread %d will be taking from %d and putting in %d\n", threadID, bestIndex + myDimension, worstIndex + myDimension);
@@ -410,17 +410,24 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	int randOffset;
 	int totalParticles = numSwarms * numParticles;
 	int gBestOffset;
+	int mySwarm, myTask;
 
 	//Each thread is responsible for updating one dimension of one particle's 
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
+		//First, figure out what swarm we are covering and who our neighbor is...
+		mySwarm = threadID / (numParticles * numTasks);
+
+		//The last we are covering is the threadID % numTasks
+		myTask = (threadID / numParticles) % numTasks;
+
 		//Two separate random numbers for every dimension for each particle each iteration.
 		randOffset = threadID * 2;
 
 		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
 		//divided by this thread's threadID.
-		gBestOffset = (threadID / (numParticles * numTasks)) * numTasks;
-		gBestOffset += threadID % numTasks;
+		gBestOffset = mySwarm * numTasks;
+		gBestOffset += myTask;
 
 		currPos = position[threadID];
 		newVel = velocity[threadID];

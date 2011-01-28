@@ -94,6 +94,7 @@ void InitRandsGPU()
 
 	curandCreateGenerator(&randGenGPU, CURAND_RNG_PSEUDO_XORWOW);
 	curandSetPseudoRandomGeneratorSeed(randGenGPU, (unsigned int) time(NULL));
+	curandGenerateSeeds(randGenGPU);
 	cudaThreadSetLimit(cudaLimitStackSize, 1024);
 }
 
