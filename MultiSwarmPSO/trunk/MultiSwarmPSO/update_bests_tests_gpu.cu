@@ -5,7 +5,7 @@
 #include "helper.h"
 #include "gpu_pso.h"
 
-void FindLocalBest(int numTasks, float *fitness, float *position, float *pBest, float *pBestPosition)
+void FindLocalBest(int currSwarm, int currParticle, int numParticles, int numTasks, float *fitness, float *position, float *pBest, float *pBestPosition)
 {
 	int i;
 
@@ -16,11 +16,11 @@ void FindLocalBest(int numTasks, float *fitness, float *position, float *pBest, 
 
 		//Copy the position!
 		for (i = 0; i < numTasks; i++)
-			pBestPosition[i] = position[i];
+			pBestPosition[currSwarm * numParticles * numTasks + i * numParticles + currParticle] = position[currSwarm * numParticles * numTasks + i * numParticles + currParticle];
 	}
 }
 
-void FindGlobalBests(float *pBest, float *pBestPositionVector, int numParticles, float *currGBest, float *gBestPositionVector, int numTasks)
+void FindGlobalBests(int currSwarm, int numParticles, float *pBest, float *pBestPositionVector, float *currGBest, float *gBestPositionVector, int numTasks)
 {
 	int i, particleIndex;
 
@@ -43,7 +43,7 @@ void FindGlobalBests(float *pBest, float *pBestPositionVector, int numParticles,
 	if (particleIndex >= 0)
 	{
 		for (i = 0; i < numTasks; i++)
-			gBestPositionVector[i] = pBestPositionVector[(particleIndex * numTasks) + i];
+			gBestPositionVector[i] = pBestPositionVector[currSwarm * numParticles * numTasks + i * numParticles + particleIndex];
 	}
 }
 
@@ -133,10 +133,10 @@ int TestLocalAndGlobalBestUpdate()
 	{
 		for (j = 0; j < numParticles; j++)
 		{
-			FindLocalBest(numTasks, &hFitness[i * numParticles + j], &hPosition[i * numParticles * numTasks + j * numTasks], 
-				               &cpuPBest[i * numParticles + j], &cpuPBestPosition[i * numParticles * numTasks + j * numTasks]);
+			FindLocalBest(i, j, numParticles, numTasks, &hFitness[i * numParticles + j], hPosition, 
+				               &cpuPBest[i * numParticles + j], cpuPBestPosition);
 		}
-		FindGlobalBests(&cpuPBest[i * numParticles], &cpuPBestPosition[i * numParticles * numTasks], numParticles, &cpuGBest[i], &cpuGBestPosition[i * numTasks], numTasks);
+		FindGlobalBests(i, numParticles, &cpuPBest[i * numParticles], cpuPBestPosition, &cpuGBest[i], &cpuGBestPosition[i * numTasks], numTasks);
 	}
 
 	//Compute the GPU solution.

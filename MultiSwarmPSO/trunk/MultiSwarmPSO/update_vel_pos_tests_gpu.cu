@@ -20,22 +20,22 @@ void UpdateVelocityPosition(int numSwarms, int numParticles, int numTasks, int n
 
 			for (k = 0; k < numTasks; k++)
 			{
-				newVelocity = w * velocity[particleOffset + k];
-				newVelocity += c1 * ( 1.0f * (pBestPositionVector[particleOffset + k] - position[particleOffset + k]) );
-				newVelocity += c2 * ( 1.0f * (gBestPositionVector[(i * numTasks) + k] - position[particleOffset + k]) );
+				newVelocity = w * velocity[i * numParticles * numTasks + k * numParticles + j];
+				newVelocity += c1 * ( 1.0f * (pBestPositionVector[i * numParticles * numTasks + k * numParticles + j] - position[i * numParticles * numTasks + k * numParticles + j]) );
+				newVelocity += c2 * ( 1.0f * (gBestPositionVector[(i * numTasks) + k] - position[i * numParticles * numTasks + k * numParticles + j]) );
 	
 				if (newVelocity > numMachines * .5f)
 					newVelocity = numMachines * .5f;
 				else if (newVelocity < numMachines * -0.5f)
 					newVelocity = numMachines * -0.5f;
 
-				velocity[particleOffset + k] = newVelocity;
-				position[particleOffset + k] += newVelocity;
+				velocity[i * numParticles * numTasks + k * numParticles + j] = newVelocity;
+				position[i * numParticles * numTasks + k * numParticles + j] += newVelocity;
 
-				if (position[particleOffset + k] < 0)
-					position[particleOffset + k] = 0.0f;
-				else if (position[particleOffset + k] > numMachines - 1)
-					position[particleOffset + k] = (float) numMachines - 1;
+				if (position[i * numParticles * numTasks + k * numParticles + j] < 0)
+					position[i * numParticles * numTasks + k * numParticles + j] = 0.0f;
+				else if (position[i * numParticles * numTasks + k * numParticles + j] > numMachines - 1)
+					position[i * numParticles * numTasks + k * numParticles + j] = (float) numMachines - 1;
 			}
 		}
 	}
@@ -55,9 +55,9 @@ int TestUpdateVelocityAndPosition()
 	float w, c1, c2;
 	ArgStruct arg;
 
-	numSwarms = 20;
-	numParticles = 64;
-	numTasks = 200;
+	numSwarms = 1;
+	numParticles = 8;
+	numTasks = 2;
 	numMachines = 8;
 	arg.x = w = 1.0f;
 	arg.z = c1 = 2.0f;
