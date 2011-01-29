@@ -22,5 +22,6 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSwap, float *fitness, int *bestSwapIndices, int *worstSwapIndices);
 
 __global__ void UpdateFitness(int numSwarms, int numParticles, int numTasks, int numMachines, float *position, float *scratch, float *fitness);
+__global__ void UpdateFitnessShared(int numSwarms, int numParticles, int numTasks, int numMachines, float *position, float *fitness);
 
 #endif

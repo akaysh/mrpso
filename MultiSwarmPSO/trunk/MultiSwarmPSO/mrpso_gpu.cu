@@ -9,32 +9,34 @@ cudaArray *cuArray;
 
 extern __shared__ float sharedScratch[];
 
-__device__ float CalcMakespanShared(int numTasks, int numMachines, float *matching)
+__device__ float CalcMakespanShared(int numParticles, int numTasks, int numMachines, float *matching)
 {
 	int i;
+	int swarmOffset, scratchOffset;
 	float makespan;
-	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
-	int taskOffset;
 	float matchingVal;
 	float val;
 	
-	makespan = 0.0f;
-	taskOffset = __mul24(threadID, numTasks);
+	//The position values that this thread needs to retrieve are located at its swarm offset (mySwarm * numParticles * numTasks)
+	//and we add i * numParticles as the offset at each point in the for loop.
+	swarmOffset = blockIdx.x * numParticles * numTasks;
+	scratchOffset = threadIdx.x * numMachines;
 
-	//Clear our scratch table
-	for (i = 0; i < numTasks; i++)
-		sharedScratch[(int) floorf(matching[taskOffset + i])] = 0.0f;
+	makespan = 0.0f;
+
+	//Clear our scratch table+
+	for (i = 0; i < numMachines; i++)
+		sharedScratch[scratchOffset + i] = 0.0f;
 
 	for (i = 0; i < numTasks; i++)
 	{
-		matchingVal = matching[taskOffset + i];
-
-		sharedScratch[(int) floorf(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
-		val = sharedScratch[(int) floorf(matchingVal)];
+		matchingVal = matching[swarmOffset + (i * numParticles) + threadIdx.x];
+		sharedScratch[scratchOffset + (int) floorf(matchingVal)] += tex2D(texETCMatrix, matchingVal, (float) i);
+		val = sharedScratch[scratchOffset + (int) floorf(matchingVal)];
 
 		if (val > makespan)
 			makespan = val;
-	}		
+	}	
 
 	return makespan;
 }
@@ -75,9 +77,16 @@ __global__ void UpdateFitness(int numSwarms, int numParticles, int numTasks, int
 {
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 
-	//If we have enough 
 	if (threadID < __mul24(numSwarms, numParticles))
 		fitness[threadID] = CalcMakespan(numParticles, numTasks, numMachines, position, scratch);
+}
+
+__global__ void UpdateFitnessShared(int numSwarms, int numParticles, int numTasks, int numMachines, float *position, float *fitness)
+{
+	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
+
+	if (threadID < __mul24(numSwarms, numParticles))
+		fitness[threadID] = CalcMakespanShared(numParticles, numTasks, numMachines, position);
 }
 
 /* UpdateBests
@@ -493,8 +502,7 @@ int GenerateRandomNumbers(int totalParticles, int numTasks, int iterationsRemain
 float *MRPSODriver(RunConfiguration *run)
 {
 	int i, j;
-	int threadsPerBlock, threadsPerBlockSwap, numBlocks, numBlocksFitness, numBlocksSwap;
-	int fitnessRequired;
+	int threadsPerBlock, threadsPerBlockSwap, numBlocks, numBlocksSwap;
 	int totalComponents;
 	int numMachines, numTasks;
 	ArgStruct args;
@@ -505,6 +513,7 @@ float *MRPSODriver(RunConfiguration *run)
 	int itersOfRands;
 	int itersOfRandsLeft;
 	int dRandsOffset;
+	int useSharedMemFitness;
 
 #ifdef KERNEL_TIMING
 	cudaEvent_t start, stop;
@@ -523,7 +532,6 @@ float *MRPSODriver(RunConfiguration *run)
 	numTasks = GetNumTasks();
 	threadsPerBlock = run->threadsPerBlock;
 	totalComponents = run->numSwarms * run->numParticles * numTasks;
-	fitnessRequired = run->numSwarms * run->numParticles;
 	args.x = run->w;
 	args.y = run->wDecay;
 	args.z = run->c1;
@@ -535,13 +543,18 @@ float *MRPSODriver(RunConfiguration *run)
 	swapSharedMem = (run->numParticles * 5 + run->numParticlesToSwap * 2) * sizeof(float);
 
 	numBlocks = CalcNumBlocks(totalComponents, threadsPerBlock);
-	numBlocksFitness = CalcNumBlocks(fitnessRequired, 128);
 	threadsPerBlockSwap = 64;
 	numBlocksSwap = CalcNumBlocks(run->numSwarms * run->numParticlesToSwap, threadsPerBlockSwap);
 
 	//Generate the random numbers we need for the initialization...
 	InitRandsGPU();
 	GenRandsGPU(run->numSwarms * run->numParticles * numTasks * 2, dRands);
+
+	//Decide if we're using the shared memory fitness kernel or not
+	if (run->numParticles * numMachines * sizeof(float) > 15360)
+		useSharedMemFitness = 0;
+	else
+		useSharedMemFitness = 1;
 
 #ifdef KERNEL_TIMING
 	cudaEventRecord(start, 0);
@@ -570,7 +583,11 @@ float *MRPSODriver(RunConfiguration *run)
 		}
 
 		//Update the Fitness
-		UpdateFitness<<<numBlocksFitness, 128>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
+		if (useSharedMemFitness)
+			UpdateFitnessShared<<<run->numSwarms, run->numParticles, run->numParticles * GetNumMachines() * sizeof(float)>>>(run->numSwarms, run->numParticles, 
+																					                                   GetNumTasks(), GetNumMachines(), dPosition, dFitness);
+		else
+			UpdateFitness<<<run->numSwarms, run->numParticles>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
 
 		//Update the local and swarm best positions
 		UpdateBests<<<run->numSwarms, run->numParticles, run->numParticles * 2 * sizeof(float)>>>(run->numSwarms, run->numParticles, numTasks, dPBest, 
