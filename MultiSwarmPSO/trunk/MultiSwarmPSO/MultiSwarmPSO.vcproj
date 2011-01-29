@@ -788,6 +788,10 @@
 			>
 		</Filter>
 		<File
+			RelativePath=".\machines100.txt"
+			>
+		</File>
+		<File
 			RelativePath=".\machines2.txt"
 			>
 		</File>
@@ -797,6 +801,14 @@
 		</File>
 		<File
 			RelativePath=".\runs.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\tasks1000.txt"
+			>
+		</File>
+		<File
+			RelativePath=".\tasks2000.txt"
 			>
 		</File>
 		<File

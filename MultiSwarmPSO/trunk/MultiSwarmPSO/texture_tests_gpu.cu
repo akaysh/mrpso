@@ -37,8 +37,8 @@ int TestTextureReads()
 
 	printf("\tRunning Texture Read Test...\n");
 	
-	BuildMachineList("machines8.txt");
-	BuildTaskList("tasks80.txt");
+	BuildMachineList("machines100.txt");
+	BuildTaskList("tasks1000.txt");
 	GenerateETCMatrix();
 
 	gpuETCMatrix = (float *) malloc(GetNumMachines() * GetNumTasks() * sizeof(float));
@@ -51,7 +51,7 @@ int TestTextureReads()
 	texETCMatrix.normalized = false;
 	texETCMatrix.filterMode = cudaFilterModePoint;
 
-	TestTexture<<<80, 8>>>(GetNumTasks(), GetNumMachines(), dOut);
+	TestTexture<<<1000, 100>>>(GetNumTasks(), GetNumMachines(), dOut);
 	cudaThreadSynchronize();
 
 	cudaMemcpy(gpuETCMatrix, dOut, sizeof(float)*GetNumMachines() *GetNumTasks(), cudaMemcpyDeviceToHost);

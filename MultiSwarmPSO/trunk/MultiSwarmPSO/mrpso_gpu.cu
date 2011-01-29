@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cutil.h>
 #include <cuda_runtime.h>
+#include <cuda.h>
 #include "helper.h"
 #include "curand.h"
 
@@ -514,6 +515,7 @@ float *MRPSODriver(RunConfiguration *run)
 	int itersOfRandsLeft;
 	int dRandsOffset;
 	int useSharedMemFitness;
+	unsigned int free, total;
 
 #ifdef KERNEL_TIMING
 	cudaEvent_t start, stop;
@@ -546,8 +548,11 @@ float *MRPSODriver(RunConfiguration *run)
 	threadsPerBlockSwap = 64;
 	numBlocksSwap = CalcNumBlocks(run->numSwarms * run->numParticlesToSwap, threadsPerBlockSwap);
 
+	cuMemGetInfo(&free, &total);
+	printf("Free: %d, total: %d\n", free, total);
+
 	//Generate the random numbers we need for the initialization...
-	InitRandsGPU();
+	//InitRandsGPU();
 	GenRandsGPU(run->numSwarms * run->numParticles * numTasks * 2, dRands);
 
 	//Decide if we're using the shared memory fitness kernel or not
