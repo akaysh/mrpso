@@ -33,6 +33,7 @@ void TestMakespan(char *filename)
 			cutResetTimer(timer);
 			cutStartTimer(timer);
 
+			InitRandsGPU();
 			AllocateGPUMemory(run);
 			InitTexture();
 

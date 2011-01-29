@@ -182,11 +182,11 @@ int TestSwapParticles()
 	int index;
 	int threadsPerBlock, numBlocks;	
 
-	numParticles = 4;
-	numToSwap = 2;
-	numSwarms = 2;
-	numTasks = 4;
-	numMachines = 4;
+	numParticles = 128;
+	numToSwap = 20;
+	numSwarms = 30;
+	numTasks = 1000;
+	numMachines = 250;
 
 	printf("\tRunning particle swap test...\n");
 
@@ -214,7 +214,7 @@ int TestSwapParticles()
 	
 	for (i = 0; i < numParticles * numSwarms; i++)
 	{
-		fitnesses[i] = (rand() % 10000000) + 1;
+		fitnesses[i] = (rand() % 1000000000) + rand() % 1000223 + rand() % (rand() % 100000000) + rand() % (rand() % 100000);
 		particles[i].fitness = fitnesses[i];
 	}
 

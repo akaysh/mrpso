@@ -62,7 +62,7 @@ int TestLocalAndGlobalBestUpdate()
 
 	numSwarms = 200;
 	numParticles = 32;
-	numTasks = 10;
+	numTasks = 1000;
 	numMachines = 800;
 	threadsPerBlock = numParticles;
 	numBlocks = numSwarms;
