@@ -110,7 +110,7 @@ int TestGPUMakespan()
 	cudaMemcpy(matching, hMatching, sizeof(float) * numMatchings * GetNumTasks(), cudaMemcpyHostToDevice);
 	cudaMemcpy(scratch, hScratch, sizeof(float) * numMatchings * GetNumMachines(), cudaMemcpyHostToDevice);
 
-	UpdateFitness<<<numBlocks, threadsPerBlock>>>(numBlocks, threadsPerBlock, GetNumTasks(), GetNumMachines(), matching, scratch, dOut);
+	UpdateFitnessShared<<<numBlocks, threadsPerBlock, threadsPerBlock * GetNumMachines() * sizeof(float)>>>(numBlocks, threadsPerBlock, GetNumTasks(), GetNumMachines(), matching, dOut);
 	cudaThreadSynchronize();
 
 	cudaMemcpy(gpuMakespans, dOut, sizeof(float) * numMatchings , cudaMemcpyDeviceToHost);
