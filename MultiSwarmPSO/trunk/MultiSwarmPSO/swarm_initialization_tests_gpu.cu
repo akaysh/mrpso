@@ -11,7 +11,7 @@ int TestSwarmInitialization()
 	int passed = 1;
 	int numTasks, numMachines;
 	RunConfiguration *run;
-	float *hPosition, *dPosition, *dGbest, *dPBest, *cpuPosition;
+	float *hPosition, *dPosition, *dPBest, *cpuPosition;
 	float *hVelocity, *dVelocity, *cpuVelocity;
 	float *hRand, *dRand;
 	int numBlocks, threadsPerBlock;

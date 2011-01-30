@@ -387,3 +387,4 @@ void UpdateVelocitiesDiscrete(Particle *particles, int numParticles, int numTask
 		UpdateVelocityDiscrete(&particles[i], numTasks, numMachines);
 }
 
+

@@ -34,7 +34,7 @@ RunConfiguration *run = NULL;
 
 int initializationRandCount, iterationRandCount;
 
-float initTime, swapTime, determineSwapTime, findBestsTime, updatePosVelTime, fitnessTime;
+float initTime, swapTime, determineSwapTime, findBestsTime, updatePosVelTime, fitnessTime, genRandTime;
 
 curandGenerator_t randGenGPU;
 
@@ -46,6 +46,7 @@ void ResetTimers()
 	findBestsTime = 0.0f;
 	updatePosVelTime = 0.0f;
 	fitnessTime = 0.0f;
+	genRandTime = 0.0f;
 }
 
 /* AllocateGPUMemory
@@ -592,3 +593,4 @@ void PrintTestResults(int passed)
 	else
 		printf("\t[FAILURE] Test failed!\n\n");
 }
+

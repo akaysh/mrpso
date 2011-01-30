@@ -93,29 +93,29 @@ int TestLocalAndGlobalBestUpdate()
 	//Randomly generate our fitness and PBest values and positions
 	for (i = 0; i < numSwarms * numParticles; i++)
 	{
-		hPBest[i] = rand() % 1000 + 100000;
-		hFitness[i] = rand() % 1000000 + 1;
+		hPBest[i] = (float) (rand() % 1000 + 100000);
+		hFitness[i] = (float) (rand() % 1000000 + 1);
 		cpuPBest[i] = hPBest[i];
 
 		for (j = 0; j < numTasks; j++)
 		{
-			hPBestPosition[i * numTasks + j] = rand() % numMachines;
+			hPBestPosition[i * numTasks + j] = (float) (rand() % numMachines);
 			cpuPBestPosition[i * numTasks + j] = hPBestPosition[i * numTasks + j];
 
-			hPosition[i * numTasks + j] = rand() % numMachines;
+			hPosition[i * numTasks + j] = (float) (rand() % numMachines);
 		}
 	}
 
 	//Randomly generate our GBest values and positions.
 	for (i = 0; i < numSwarms; i++)
 	{
-		hGBest[i] = rand() % 1000000 + rand() % 10000 + rand() % 100330 + 1;
+		hGBest[i] = (float) (rand() % 1000000 + rand() % (rand() % 1000000) + rand() % 100330 + 1);
 
 		cpuGBest[i] = hGBest[i];
 
 		for (j = 0; j < numTasks; j++)
 		{
-			hGBestPosition[i * numTasks + j] = rand() % numMachines;
+			hGBestPosition[i * numTasks + j] = (float) (rand() % numMachines);
 			cpuGBestPosition[i * numTasks + j] = hGBestPosition[i * numTasks + j];
 		}
 	}	
