@@ -163,7 +163,7 @@ int TestGenerateSwapIndices()
 
 int TestSwapParticles()
 {
-	int i, j, k, mySwarmOffset, previousSwarmOffset, neighborSwarmOffset, previousSwarmValue, neighborSwarmValue;
+	int i, j, k, mySwarmOffset, previousSwarmValue, neighborSwarmValue;
 	int passed = 1;
 	Particle *particles;
 	float *hPosition, *dPosition, *hVelocity, *dVelocity;
@@ -176,7 +176,6 @@ int TestSwapParticles()
 	int numToSwap;
 	int numSwarms;
 	int numTasks;
-	int numMachines;
 	float currFitness;
 	int swapIndex;
 	int index;
@@ -186,7 +185,6 @@ int TestSwapParticles()
 	numToSwap = 20;
 	numSwarms = 30;
 	numTasks = 1000;
-	numMachines = 250;
 
 	printf("\tRunning particle swap test...\n");
 
@@ -214,7 +212,7 @@ int TestSwapParticles()
 	
 	for (i = 0; i < numParticles * numSwarms; i++)
 	{
-		fitnesses[i] = (rand() % 1000000000) + rand() % 1000223 + rand() % (rand() % 100000000) + rand() % (rand() % 100000);
+		fitnesses[i] = (float) (rand() % 1000000000) + rand() % 1000223 + rand() % (rand() % 100000000) + rand() % (rand() % 100000);
 		particles[i].fitness = fitnesses[i];
 	}
 
@@ -384,7 +382,6 @@ int TestSwapParticles()
 void RunSwapTests()
 {
 	int passed = 1;
-	int i;
 
 	printf("\nStarting GPU swap tests...\n\n");
 

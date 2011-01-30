@@ -104,12 +104,8 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	int i;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	int updateFitness;
-	int gBestIndex;
-	int tidNumTasks;
 
 	indexValues = &fitnessValues[blockDim.x];
-
-	tidNumTasks = threadID * numTasks;
 
 	//Push the fitness values for this swarm into shared memory
 	if (threadIdx.x < numParticles)
@@ -553,7 +549,18 @@ float *MRPSODriver(RunConfiguration *run)
 
 	//Generate the random numbers we need for the initialization...
 	//InitRandsGPU();
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
+
 	GenRandsGPU(run->numSwarms * run->numParticles * numTasks * 2, dRands);
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	genRandTime += elapsedTime;
+#endif
 
 	//Decide if we're using the shared memory fitness kernel or not
 	if (run->numParticles * numMachines * sizeof(float) > 15360)
@@ -583,9 +590,23 @@ float *MRPSODriver(RunConfiguration *run)
 		//If we need to generate more random numbers then do so now...
 		if (!itersOfRandsLeft)
 		{
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
 			itersOfRands = GenerateRandomNumbers(run->numSwarms * run->numParticles, numTasks, run->numIterations - i + 1, dRands);
 			itersOfRandsLeft = itersOfRands;
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	genRandTime += elapsedTime;
+#endif
 		}
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
 
 		//Update the Fitness
 		if (useSharedMemFitness)
@@ -594,10 +615,27 @@ float *MRPSODriver(RunConfiguration *run)
 		else
 			UpdateFitness<<<run->numSwarms, run->numParticles>>>(run->numSwarms, run->numParticles, numTasks, numMachines, dPosition, dScratch, dFitness);
 
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	fitnessTime += elapsedTime;
+#endif
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
 		//Update the local and swarm best positions
 		UpdateBests<<<run->numSwarms, run->numParticles, run->numParticles * 2 * sizeof(float)>>>(run->numSwarms, run->numParticles, numTasks, dPBest, 
 																							      dPBestPosition, dGBest, dGBestPosition,
 														                                          dPosition, dFitness);
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	findBestsTime += elapsedTime;
+#endif
+
 #ifdef RECORD_VALUES
 		cudaThreadSynchronize();
 		cudaMemcpy(gBestsTemp, dGBest, run->numSwarms * sizeof(float), cudaMemcpyDeviceToHost);
@@ -614,24 +652,54 @@ float *MRPSODriver(RunConfiguration *run)
 		gBests[i - 1] = minVal;
 #endif
 
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
+
 		//REMINDER: The problem lies in the random number use after a certain number of iterations.
 		//Update the Position and Velocity
 		dRandsOffset = (itersOfRands - itersOfRandsLeft) * run->numSwarms * run->numParticles * numTasks * 2;
 		UpdateVelocityAndPosition<<<numBlocks, threadsPerBlock>>>(run->numSwarms, run->numParticles, numMachines, numTasks, 
 																  dVelocity, dPosition, dPBestPosition, dGBestPosition, &dRands[dRandsOffset], args);	
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	updatePosVelTime += elapsedTime;
+#endif
 
 		if (args.x > 0.0f)
 			args.x *= run->wDecay;
 
 		if (i % run->iterationsBeforeSwap == 0)
 		{
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
 			//Build up the swap indices for each swarm
 			GenerateSwapIndices<<<run->numSwarms, run->numParticles, swapSharedMem>>>(run->numSwarms, run->numParticles, run->numParticlesToSwap, 
 			                                                                          dFitness, dBestSwapIndices, dWorstSwapIndices);
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	determineSwapTime += elapsedTime;
+#endif
+
+#ifdef KERNEL_TIMING
+	cudaEventRecord(start, 0);
+#endif
 
 			//Swap particles between swarms
 			SwapBestParticles<<<numBlocksSwap, threadsPerBlockSwap>>>(run->numSwarms, run->numParticles, numTasks, run->numParticlesToSwap, dBestSwapIndices, 
 																	  dWorstSwapIndices, dPosition, dVelocity, dPBest, dPBestPosition);
+#ifdef KERNEL_TIMING
+	cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop);
+	cudaEventElapsedTime(&elapsedTime, start, stop);
+	swapTime += elapsedTime;
+#endif
 		}
 
 		itersOfRandsLeft--;
@@ -641,4 +709,5 @@ float *MRPSODriver(RunConfiguration *run)
 
 	return gBests;
 }
+
 

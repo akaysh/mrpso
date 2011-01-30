@@ -3,9 +3,11 @@
 
 #define RECORD_VALUES
 
+#define KERNEL_TIMING
+
 #include <cuda_runtime.h>
 
-#define MAX_RAND_GEN 52428800
+#define MAX_RAND_GEN 78643200
 
 typedef enum VELOCITY_UPDATE_STYLE
 {
@@ -140,6 +142,7 @@ extern float *hFitness, *dFitness;
 
 extern int initializationRandCount, iterationRandCount;
 
-extern float initTime, swapTime, determineSwapTime, findBestsTime, updatePosVelTime, fitnessTime;
+extern float initTime, swapTime, determineSwapTime, findBestsTime, updatePosVelTime, fitnessTime, genRandTime;
 
 #endif
+

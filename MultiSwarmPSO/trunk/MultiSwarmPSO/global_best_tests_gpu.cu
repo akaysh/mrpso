@@ -85,7 +85,7 @@ void FindGlobalBest(float *pBest, float *pBestPositionVector, int numParticles, 
 int GlobalBestDeterminationTest()
 {
 	int passed = 1;
-	int i, j, k;
+	int i, j;
 	float *hPBest, *dPBest, *cpuPBest;
 	float *hGBest, *dGBest, *cpuGBest;
 	float *hPBestPosition, *dPBestPosition, *cpuPBestPosition;
@@ -122,12 +122,12 @@ int GlobalBestDeterminationTest()
 	//Randomly generate our PBest values and positions
 	for (i = 0; i < numSwarms * numParticles; i++)
 	{
-		hPBest[i] = rand() % 1000 + 1;
+		hPBest[i] = (float) (rand() % 1000 + 1);
 		cpuPBest[i] = hPBest[i];
 
 		for (j = 0; j < numTasks; j++)
 		{
-			hPBestPosition[i * numTasks + j] = rand() % numMachines;
+			hPBestPosition[i * numTasks + j] = (float) (rand() % numMachines);
 			cpuPBestPosition[i * numTasks + j] = hPBestPosition[i * numTasks + j];
 		}
 	}
@@ -135,13 +135,13 @@ int GlobalBestDeterminationTest()
 	//Randomly generate our GBest values and positions.
 	for (i = 0; i < numSwarms; i++)
 	{
-		hGBest[i] = rand() % 1000 + 1;
+		hGBest[i] = (float) (rand() % 1000 + 1);
 
 		cpuGBest[i] = hGBest[i];
 
 		for (j = 0; j < numTasks; j++)
 		{
-			hGBestPosition[i * numTasks + j] = rand() % numMachines;
+			hGBestPosition[i * numTasks + j] = (float) (rand() % numMachines);
 			cpuGBestPosition[i * numTasks + j] = hGBestPosition[i * numTasks + j];
 		}
 	}	

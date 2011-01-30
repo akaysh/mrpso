@@ -35,3 +35,4 @@ void RunGPURandGenTests();
 void TestMRPSOCPUResults(char *filename);
 
 #endif
+

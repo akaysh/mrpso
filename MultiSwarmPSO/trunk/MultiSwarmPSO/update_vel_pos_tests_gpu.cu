@@ -9,15 +9,12 @@ void UpdateVelocityPosition(int numSwarms, int numParticles, int numTasks, int n
 						    float *pBestPositionVector, float *gBestPositionVector, float w, float c1, float c2)
 {
 	int i, j, k;
-	int particleOffset;
 	float newVelocity;	
 	
 	for (i = 0; i < numSwarms; i++)
 	{
 		for (j = 0; j < numParticles; j++)
 		{
-			particleOffset = (i * numParticles * numTasks) + (j * numTasks);
-
 			for (k = 0; k < numTasks; k++)
 			{
 				newVelocity = w * velocity[i * numParticles * numTasks + k * numParticles + j];
