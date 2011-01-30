@@ -60,7 +60,7 @@ void TestMakespan(char *filename)
 			cutResetTimer(timer);
 			cutStartTimer(timer);
 
-			RunMRPSO(run);
+			//RunMRPSO(run);
 
 			cutStopTimer(timer);
 

@@ -13,7 +13,7 @@ __device__ int GetDiscreteCoordT(float val)
 
 __global__ void TestTexture(int numTasks, int numMachines, float *outVals)
 {
-	int idx = blockIdx.x*blockDim.x + threadIdx.x;
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < numTasks * numMachines)
 		outVals[idx] = tex2D(texETCMatrix, threadIdx.x, blockIdx.x);
@@ -34,6 +34,7 @@ int TestTextureReads()
 	cudaArray *cuArray;
 	float *dOut;
 	float *gpuETCMatrix;
+	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
 
 	printf("\tRunning Texture Read Test...\n");
 	
@@ -44,23 +45,25 @@ int TestTextureReads()
 	gpuETCMatrix = (float *) malloc(GetNumMachines() * GetNumTasks() * sizeof(float));
 	cudaMalloc((void **)&dOut, GetNumMachines() * GetNumTasks() * sizeof(float));
 
-	cudaMallocArray(&cuArray, &texETCMatrix.channelDesc, GetNumMachines(), GetNumTasks());
-	cudaMemcpyToArray(cuArray, 0, 0, hETCMatrix, sizeof(float)*GetNumMachines() *GetNumTasks(), cudaMemcpyHostToDevice);
-	cudaBindTextureToArray(texETCMatrix, cuArray);
-
 	texETCMatrix.normalized = false;
 	texETCMatrix.filterMode = cudaFilterModePoint;
+	texETCMatrix.addressMode[0] = cudaAddressModeClamp;
+    texETCMatrix.addressMode[1] = cudaAddressModeClamp;
 
-	TestTexture<<<1000, 100>>>(GetNumTasks(), GetNumMachines(), dOut);
+	cudaMallocArray(&cuArray, &channelDesc, GetNumMachines(), GetNumTasks());
+	cudaMemcpyToArray(cuArray, 0, 0, hETCMatrix, sizeof(float) * GetNumMachines() * GetNumTasks(), cudaMemcpyHostToDevice);
+	cudaBindTextureToArray(texETCMatrix, cuArray, channelDesc);
+
+	TestTexture<<<GetNumTasks(), GetNumMachines()>>>(GetNumTasks(), GetNumMachines(), dOut);
 	cudaThreadSynchronize();
 
-	cudaMemcpy(gpuETCMatrix, dOut, sizeof(float)*GetNumMachines() *GetNumTasks(), cudaMemcpyDeviceToHost);
+	cudaMemcpy(gpuETCMatrix, dOut, sizeof(float) * GetNumMachines() * GetNumTasks(), cudaMemcpyDeviceToHost);
 
 	for (i = 0; i < GetNumTasks() * GetNumMachines(); i++)
 	{
 		if (gpuETCMatrix[i] - hETCMatrix[i] > ACCEPTED_DELTA)
 		{
-			printf("\t[ERROR] - GPU ETC Matrix was: %f (expected: %f)\n", gpuETCMatrix[i], hETCMatrix[i]);
+			printf("\t[ERROR] - GPU ETC Matrix element %d was: %f (expected: %f)\n", i, gpuETCMatrix[i], hETCMatrix[i]);
 			passed = 0;
 		}
 	}

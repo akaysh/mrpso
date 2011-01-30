@@ -93,14 +93,14 @@ void InitRandsGPU()
 {
 	unsigned int free, total;
 
-	cuMemGetInfo(&free, &total);
-	printf("Free: %d, total: %d\n", free, total);
+	//cuMemGetInfo(&free, &total);
+	//printf("Free: %d, total: %d\n", free, total);
 
 	curandCreateGenerator(&randGenGPU, CURAND_RNG_PSEUDO_XORWOW);
 	printf((cudaGetErrorString(cudaGetLastError())));
 
-	cuMemGetInfo(&free, &total);
-	printf("Free: %d, total: %d\n", free, total);
+	//cuMemGetInfo(&free, &total);
+	//printf("Free: %d, total: %d\n", free, total);
 	curandSetPseudoRandomGeneratorSeed(randGenGPU, (unsigned int) time(NULL));
 	curandGenerateSeeds(randGenGPU);
 	cudaThreadSetLimit(cudaLimitStackSize, 1024);

@@ -104,6 +104,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	int i;
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	int updateFitness;
+	int index;
 
 	indexValues = &fitnessValues[blockDim.x];
 
@@ -119,10 +120,12 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	if (fitnessValues[threadIdx.x] < pBest[threadID])
 	{
 		pBest[threadID] = fitnessValues[threadIdx.x];
+
+		index = blockIdx.x * numParticles * numTasks + threadIdx.x;
 		
 		for (i = 0; i < numTasks; i++)
 		{
-			pBestPositions[blockIdx.x * numParticles * numTasks + i * numParticles + threadIdx.x] = position[blockIdx.x * numParticles * numTasks + i * numParticles + threadIdx.x];
+			pBestPositions[index + (i * numParticles)] = position[index + (i * numParticles)];
 		}
 	}
 
@@ -147,8 +150,7 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	//Both the shared and global memory values will be broadcast anyways as each thread is
 	//accessing the same value, so the performance loss will be minimal.
 	updateFitness = 0;	
-	__syncthreads();
-
+	
 	if (fitnessValues[0] < gBest[blockIdx.x])
 	{		
 		updateFitness = 1;	
@@ -157,9 +159,11 @@ __global__ void UpdateBests(int numSwarms, int numParticles, int numTasks, float
 	//Update gBest and gBestPosition by using all threads in a for loop if necessary
 	if (updateFitness)
 	{
+		index = blockIdx.x * numParticles * numTasks  + (int) indexValues[0]; 
+
 		for (i = threadIdx.x; i < numTasks; i += blockDim.x)
 		{
-			gBestPositions[blockIdx.x * numTasks + i] = pBestPositions[blockIdx.x * numParticles * numTasks  + i * numParticles + (int) indexValues[0]];			
+			gBestPositions[blockIdx.x * numTasks + i] = pBestPositions[index + (i * numParticles)];			
 		}
 
 		if (threadIdx.x == 0)
@@ -413,34 +417,34 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	float newVel;
 	float currPos;
-	int randOffset;
+	//int randOffset;
 	int totalParticles = numSwarms * numParticles;
 	int gBestOffset;
-	int mySwarm, myTask;
+	//int mySwarm, myTask;
 
 	//Each thread is responsible for updating one dimension of one particle's 
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
 		//First, figure out what swarm we are covering and who our neighbor is...
-		mySwarm = threadID / (numParticles * numTasks);
+		//mySwarm = threadID / (numParticles * numTasks);
 
 		//The last we are covering is the threadID % numTasks
-		myTask = (threadID / numParticles) % numTasks;
+		//myTask = (threadID / numParticles) % numTasks;
 
 		//Two separate random numbers for every dimension for each particle each iteration.
-		randOffset = threadID * 2;
+		//randOffset = ;
 
 		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
 		//divided by this thread's threadID.
-		gBestOffset = mySwarm * numTasks;
-		gBestOffset += myTask;
+		gBestOffset = ((threadID / (numParticles * numTasks)) * numTasks) + (threadID / numParticles) % numTasks;
+		//gBestOffset += myTask;
 
 		currPos = position[threadID];
 		newVel = velocity[threadID];
 
 		newVel *= args.x;		
-		newVel += args.z * rands[randOffset] * (pBestPosition[threadID] - currPos);
-		newVel += args.w * rands[randOffset + 1] * (gBestPosition[gBestOffset] - currPos);	
+		newVel += args.z * rands[threadID * 2] * (pBestPosition[threadID] - currPos);
+		newVel += args.w * rands[(threadID * 2) + 1] * (gBestPosition[gBestOffset] - currPos);	
 
 		//Write out our velocity
 		newVel = ClampVelocity(numMachines, newVel);
@@ -544,8 +548,8 @@ float *MRPSODriver(RunConfiguration *run)
 	threadsPerBlockSwap = 64;
 	numBlocksSwap = CalcNumBlocks(run->numSwarms * run->numParticlesToSwap, threadsPerBlockSwap);
 
-	cuMemGetInfo(&free, &total);
-	printf("Free: %d, total: %d\n", free, total);
+	//cuMemGetInfo(&free, &total);
+	//printf("Free: %d, total: %d\n", free, total);
 
 	//Generate the random numbers we need for the initialization...
 	//InitRandsGPU();
