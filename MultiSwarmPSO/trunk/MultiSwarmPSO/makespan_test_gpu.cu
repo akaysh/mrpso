@@ -67,8 +67,8 @@ int TestGPUMakespan()
 	float *tempMatching;
 	cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
 
-	BuildMachineList("machines8.txt");
-	BuildTaskList("tasks80.txt");
+	BuildMachineList("machines100.txt");
+	BuildTaskList("tasks1000.txt");
 	GenerateETCMatrix();
 
 	numMatchings = 1024;
