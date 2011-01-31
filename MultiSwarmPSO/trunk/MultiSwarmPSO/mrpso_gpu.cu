@@ -386,7 +386,7 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
  */
 __device__ float ClampVelocity(int numMachines, float velocity)
 {
-	float clamp = 0.5f * numMachines;
+	float clamp = 0.4f * numMachines;
 
 	if (velocity > clamp)
 		velocity = clamp;
@@ -411,6 +411,31 @@ __device__ float ClampPosition(int numMachines, float position)
 	return position;
 }
 
+__device__ float Sign(float val)
+{
+	return val < 0.0f ? -1.0f : val > 0.0f ? 1.0f : 0.0f;
+}
+
+__device__ float OmegaFunc(float pos, float fGBest, int numMachines)
+{
+	float val;
+	float dis;
+
+	dis = pos - fGBest;
+
+	val = Sign(dis) * (1 - fabs(dis / numMachines));
+
+	return val;
+}
+
+__device__ float FindRepulsiveFactor(float fGBest, float pos, float gBest, int numMachines)
+{
+	if (pos < fGBest < gBest || gBest < fGBest < pos)
+		return -OmegaFunc(pos, fGBest, numMachines);
+	else
+		return OmegaFunc(pos, fGBest, numMachines);
+}
+
 __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int numMachines, int numTasks, float *velocity, float *position, 
 										  float *pBestPosition, float *gBestPosition, float *rands, ArgStruct args)
 {
@@ -420,13 +445,17 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	//int randOffset;
 	int totalParticles = numSwarms * numParticles;
 	int gBestOffset;
-	//int mySwarm, myTask;
+	int mySwarm;
+	int gNeighborOffset;
 
 	//Each thread is responsible for updating one dimension of one particle's 
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
 		//First, figure out what swarm we are covering and who our neighbor is...
-		//mySwarm = threadID / (numParticles * numTasks);
+		mySwarm = threadID / (numParticles * numTasks);
+
+		gNeighborOffset = mySwarm < numSwarms - 1 ? mySwarm + 1 : 0;
+
 
 		//The last we are covering is the threadID % numTasks
 		//myTask = (threadID / numParticles) % numTasks;
@@ -436,7 +465,8 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 
 		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
 		//divided by this thread's threadID.
-		gBestOffset = ((threadID / (numParticles * numTasks)) * numTasks) + (threadID / numParticles) % numTasks;
+		gBestOffset = (mySwarm * numTasks) + (threadID / numParticles) % numTasks;
+		gNeighborOffset = (gNeighborOffset * numTasks) + (threadID / numParticles) % numTasks;
 		//gBestOffset += myTask;
 
 		currPos = position[threadID];
@@ -445,6 +475,9 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 		newVel *= args.x;		
 		newVel += args.z * rands[threadID * 2] * (pBestPosition[threadID] - currPos);
 		newVel += args.w * rands[(threadID * 2) + 1] * (gBestPosition[gBestOffset] - currPos);	
+
+		if (mySwarm % 2 == 0)
+			newVel += 0.5f * rands[(threadID * 2) + 1] * FindRepulsiveFactor(gBestPosition[gNeighborOffset], gBestPosition[gBestOffset], position[threadID], numMachines);
 
 		//Write out our velocity
 		newVel = ClampVelocity(numMachines, newVel);
@@ -672,7 +705,7 @@ float *MRPSODriver(RunConfiguration *run)
 	updatePosVelTime += elapsedTime;
 #endif
 
-		if (args.x > 0.0f)
+		if (args.x > 0.001f)
 			args.x *= run->wDecay;
 
 		if (i % run->iterationsBeforeSwap == 0)
