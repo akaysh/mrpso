@@ -27,7 +27,7 @@ void TestMRPSOCPUResults(char *filename)
 			{
 				RunMRPSO(run);
 
-				data = GetRecordedData();
+				//data = GetRecordedData();
 
 				run = GetNextRun();
 			}

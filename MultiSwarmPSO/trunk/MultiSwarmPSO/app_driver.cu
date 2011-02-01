@@ -29,6 +29,8 @@ void TestMakespan(char *filename)
 		cpuTime = 0.0f;
 		ResetTimers();
 
+		printf("Running test using file %s, %s, with %d swarms and %d particles...\n", run->taskFile, run->machineFile, run->numSwarms, run->numParticles);
+
 		for (i = 0; i < run->numTests; i++)
 		{			
 			BuildMachineList(run->machineFile);
@@ -36,15 +38,17 @@ void TestMakespan(char *filename)
 			GenerateETCMatrix();	
 			
 			cudaThreadSynchronize();
+			
 			cutResetTimer(timer);
 			cutStartTimer(timer);
 
 			InitRandsGPU();
 			AllocateGPUMemory(run);
 			InitTexture();
-
+			
 			MRPSODriver(run);
 
+			cudaThreadSynchronize();
 			cutStopTimer(timer);	
 
 			FreeCPUMemory();
@@ -60,14 +64,19 @@ void TestMakespan(char *filename)
 			cutResetTimer(timer);
 			cutStartTimer(timer);
 
-			//RunMRPSO(run);
+			RunMRPSO(run);
 
 			cutStopTimer(timer);
 
 			cpuTime += cutGetTimerValue(timer);
 
 			FreeCPUMemory();
+
+			printf(".");
+			fflush(stdout);
 		}
+
+		printf("Completed run!\n\n");
 
 		gpuTime /= run->numTests;
 		cpuTime /= run->numTests;
