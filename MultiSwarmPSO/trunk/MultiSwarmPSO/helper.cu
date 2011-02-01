@@ -97,7 +97,7 @@ void InitRandsGPU()
 	//printf("Free: %d, total: %d\n", free, total);
 
 	curandCreateGenerator(&randGenGPU, CURAND_RNG_PSEUDO_XORWOW);
-	printf((cudaGetErrorString(cudaGetLastError())));
+	//printf((cudaGetErrorString(cudaGetLastError())));
 
 	//cuMemGetInfo(&free, &total);
 	//printf("Free: %d, total: %d\n", free, total);
