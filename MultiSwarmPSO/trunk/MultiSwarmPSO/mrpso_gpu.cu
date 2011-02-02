@@ -505,9 +505,9 @@ void InitTexture()
 }
 
 void ClearTexture()
-{
-	cudaUnbindTexture(texETCMatrix);
+{	
 	cudaFreeArray(cuArray);
+	cudaUnbindTexture(texETCMatrix);
 }
 
 /* GenerateRandomNumbers
@@ -743,6 +743,10 @@ float *MRPSODriver(RunConfiguration *run)
 	}
 
 	FreeRandsGPU();
+
+#ifdef RECORD_VALUES
+	free(gBestsTemp);
+#endif
 
 	return gBests;
 }
