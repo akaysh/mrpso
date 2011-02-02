@@ -126,7 +126,7 @@
 				Arch="20"
 				FastMath="true"
 				ExtraNvccOptions="-Xptxas -v"
-				Keep="true"
+				Keep="false"
 				Optimization="0"
 				RuntimeChecks="3"
 				Runtime="1"

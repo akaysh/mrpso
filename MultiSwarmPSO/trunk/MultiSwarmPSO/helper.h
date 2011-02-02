@@ -70,8 +70,8 @@ typedef struct
  */
 typedef struct  
 {
-	char taskFile[512];			//The file containing task definitions.
-	char machineFile[512];		//The file containing machine definitions.
+	int taskFile;			//The file containing task definitions.
+	int machineFile;		//The file containing machine definitions.
 	int numSwarms;				//The number of swarms to use for a given objective.
 	int numParticles;			//The number of particles per swarm.
 	int numIterations;			//The total number of iterations.

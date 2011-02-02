@@ -21,7 +21,7 @@ void TestMakespan(char *filename)
 
 	cutCreateTimer(&timer);
 
-	fprintf(timeOutFile, "num_swarms,particles_per_swarm,num_iterations,init_time,update_pos_vel_time,fitness_time,update_bests_time,determine_swaps_time,swap_time,rand_time,cpu_time,gpu_time\n");
+	fprintf(timeOutFile, "num_tasks,num_machines,num_swarms,particles_per_swarm,num_iterations,init_time,update_pos_vel_time,fitness_time,update_bests_time,determine_swaps_time,swap_time,rand_time,cpu_time,gpu_time\n");
 
 	while (run->numSwarms != -1)
 	{
@@ -29,14 +29,10 @@ void TestMakespan(char *filename)
 		cpuTime = 0.0f;
 		ResetTimers();
 
-		printf("Running test using file %s, %s, with %d swarms and %d particles...\n", run->taskFile, run->machineFile, run->numSwarms, run->numParticles);
+		printf("Running test with %d tasks and %d machines with %d swarms and %d particles...\n", run->taskFile, run->machineFile, run->numSwarms, run->numParticles);
 
 		for (i = 0; i < run->numTests; i++)
-		{			
-			BuildMachineList(run->machineFile);
-			BuildTaskList(run->taskFile);
-			GenerateETCMatrix();	
-			
+		{						
 			cudaThreadSynchronize();
 			
 			cutResetTimer(timer);
@@ -51,15 +47,10 @@ void TestMakespan(char *filename)
 			cudaThreadSynchronize();
 			cutStopTimer(timer);	
 
-			FreeCPUMemory();
 			FreeGPUMemory();
 			ClearTexture();
 
 			gpuTime += cutGetTimerValue(timer);
-
-			BuildMachineList(run->machineFile);
-			BuildTaskList(run->taskFile);
-			GenerateETCMatrix();
 
 			cutResetTimer(timer);
 			cutStartTimer(timer);
@@ -70,24 +61,26 @@ void TestMakespan(char *filename)
 
 			cpuTime += cutGetTimerValue(timer);
 
-			FreeCPUMemory();
-
 			printf(".");
 			fflush(stdout);
 		}
+
+		FreeCPUMemory();
 
 		printf("Completed run!\n\n");
 
 		gpuTime /= run->numTests;
 		cpuTime /= run->numTests;
+		initTime /= run->numTests;
 		swapTime /= run->numTests;
 		determineSwapTime /= run->numTests; 
 		findBestsTime /= run->numTests;
 		updatePosVelTime /= run->numTests;
 		fitnessTime /= run->numTests;
+		genRandTime /= run->numTests;
 
-		fprintf(timeOutFile, "%d,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f\n", run->numSwarms, run->numParticles, run->numIterations, initTime, updatePosVelTime, fitnessTime, findBestsTime,
-			    determineSwapTime, swapTime, genRandTime, cpuTime, gpuTime);
+		fprintf(timeOutFile, "%d,%d,%d,%d,%d,%f,%f,%f,%f,%f,%f,%f,%f,%f\n", run->taskFile, run->machineFile, run->numSwarms, run->numParticles, run->numIterations, 
+			    initTime, updatePosVelTime, fitnessTime, findBestsTime, determineSwapTime, swapTime, genRandTime, cpuTime, gpuTime);
 
 		run = GetNextRun();
 	}

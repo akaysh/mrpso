@@ -119,6 +119,8 @@ void RunMRPSO(RunConfiguration *run)
 	}
 
 	free(particles);
+	free(gBest);
+	free(gBestPositionVector);
 }
 
 #ifdef RECORD_VALUES

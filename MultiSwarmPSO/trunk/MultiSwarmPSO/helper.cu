@@ -142,6 +142,40 @@ void GenerateRandsGPU(int total, float *deviceMem)
 	cudaThreadSetLimit(cudaLimitStackSize, 1024);
 }
 
+Machine* GenerateMachineList(int numMachines)
+{
+	int i;
+
+	srand((unsigned int) time(NULL));
+	
+	hMachines = (Machine *) malloc(numMachines * sizeof(Machine));
+
+	for (i = 0; i < numMachines; i++)
+	{
+		hMachines[i].MIPS = rand() % 490 + 10;
+		hMachines[i].energy = rand() % 180 + 20;
+	}
+
+	return hMachines;
+}
+
+Task* GenerateTaskList(int numTasks)
+{
+	int i;
+
+	srand((unsigned int) time(NULL));
+	
+	hTasks = (Task *) malloc(numTasks * sizeof(Task));
+
+	for (i = 0; i < numTasks; i++)
+	{
+		hTasks[i].length = rand() % 1000 + 1;
+	}
+
+	return hTasks;
+}
+
+
 /* OpenRunsFile
  *
  * Opens the requested file containing run data.
@@ -163,9 +197,20 @@ RunConfiguration *LoadRunConfig(char *line)
 {
 	if (line != NULL)
 	{
-		sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d %d %d", &run->taskFile, &run->machineFile, &run->numSwarms, &run->numParticles, 
+		//sscanf(line, "%s %s %d %d %d %f %f %f %f %d %d %d %d", &run->taskFile, &run->machineFile, &run->numSwarms, &run->numParticles, 
+		//	   &run->numIterations, &run->w, &run->wDecay, &run->c1, &run->c2, &run->iterationsBeforeSwap, &run->numParticlesToSwap, &run->threadsPerBlock, 
+		//	   &run->numTests);
+
+		sscanf(line, "%d %d %d %d %d %f %f %f %f %d %d %d %d", &run->taskFile, &run->machineFile, &run->numSwarms, &run->numParticles, 
 			   &run->numIterations, &run->w, &run->wDecay, &run->c1, &run->c2, &run->iterationsBeforeSwap, &run->numParticlesToSwap, &run->threadsPerBlock, 
 			   &run->numTests);
+
+		numTasks = run->taskFile;
+		numMachines = run->machineFile;
+
+		GenerateMachineList(run->machineFile);
+		GenerateTaskList(run->taskFile);
+		GenerateETCMatrix();
 	}
 
 	return run;
