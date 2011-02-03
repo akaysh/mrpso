@@ -126,7 +126,7 @@ float UpdateFitnessMakespan(Particle *particle, int numTasks, int numMachines)
 	float *matching;
 	float makespan;
 
-	matching = (float *) calloc(numTasks, sizeof(float));
+	matching = (float *) calloc(numMachines, sizeof(float));
 
 	//Each dimension of the Particle's position vector represents a task, the actual
 	//position in that dimension represents the machine this task is matched to.
