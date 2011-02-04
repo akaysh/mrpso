@@ -1,7 +1,7 @@
 #ifndef _HELPER_PSO_H_
 #define _HELPER_PSO_H_
 
-//#define RECORD_VALUES
+#define RECORD_VALUES
 
 #define KERNEL_TIMING
 
@@ -123,6 +123,8 @@ void FreeRandsGPU();
 void GenRandsGPU(int numToGen, float *deviceMem);
 
 void ResetTimers();
+
+void GenData(RunConfiguration *run);
 
 extern float *hPosition, *dPosition;
 

@@ -87,3 +87,62 @@ void TestMakespan(char *filename)
 
 	fclose(timeOutFile);
 }
+
+void TestSolutionQuality(char *filename)
+{
+	int i, j;
+	RunConfiguration *run;
+	FILE *qualFile;
+	float gpuTime, cpuTime;
+	unsigned int timer;
+
+	float *mrpsoRet, *psoRet, fcfsRet;
+
+	float mrpsoComp, psoComp;
+
+	qualFile = fopen("qual_results.csv", "w");
+
+	OpenRunsFile(filename);
+	fprintf(qualFile, "numTasks,numMachines,numSwarms,numParticles,numIterations,MRPSO,PSO,FCFS\n");
+
+	run = GetNextRun();
+
+	while (run->numSwarms != -1)
+	{
+		mrpsoComp = 0.0f;
+		psoComp = 0.0f;
+
+		for (i = 0; i < 10; i++)
+		{
+			GenData(run);
+
+			//Run the same test numTests times
+			for (j = 0; j < run->numTests; j++)
+			{
+				InitRandsGPU();
+				AllocateGPUMemory(run);
+				InitTexture();
+			
+				mrpsoRet = MRPSODriver(run);
+
+				FreeGPUMemory();
+				ClearTexture();
+
+				psoRet = RunMakespanPSO(run->numParticles, GetNumTasks(), GetNumMachines(), run->w, run->wDecay, run->c1, run->c2, run->numIterations, BASIC);
+
+				fcfsRet = GetFCFSMapping(GetNumTasks(),GetNumMachines());
+
+			}
+
+
+
+		}
+
+
+
+	}
+
+
+	fclose(qualFile);
+
+}

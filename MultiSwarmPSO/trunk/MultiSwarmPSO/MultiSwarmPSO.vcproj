@@ -695,6 +695,14 @@
 				Name="CPU"
 				>
 				<File
+					RelativePath=".\fcfs.cu"
+					>
+				</File>
+				<File
+					RelativePath=".\makespan_pso_cpu.cu"
+					>
+				</File>
+				<File
 					RelativePath=".\mrpso_cpu.cu"
 					>
 				</File>

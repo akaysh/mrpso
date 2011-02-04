@@ -18,7 +18,9 @@ int main(int argc, char* argv[])
 
 	InitCUDA();
 
-	TestMakespan("runs.txt");
+	//TestMakespan("runs.txt");
+
+	TestSolutionQuality("runs.txt");
 
 	
 

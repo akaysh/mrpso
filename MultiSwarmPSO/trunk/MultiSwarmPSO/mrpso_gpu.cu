@@ -745,7 +745,7 @@ float *MRPSODriver(RunConfiguration *run)
 	FreeRandsGPU();
 
 #ifdef RECORD_VALUES
-	free(gBestsTemp);
+//	free(gBestsTemp);
 #endif
 
 	return gBests;

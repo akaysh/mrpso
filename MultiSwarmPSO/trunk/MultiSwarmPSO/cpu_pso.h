@@ -30,5 +30,8 @@ float *GetRecordedData();
 
 int CompareParticles(const void *elem1, const void *elem2);
 
+float *RunMakespanPSO(int numParticles, int numTasks, int numMachines, float w, float wDecay, float c1, float c2, int numIterations, velocity_update_style vStyle);
+float GetFCFSMapping(int numTasks, int numMachines);
+
 #endif
 

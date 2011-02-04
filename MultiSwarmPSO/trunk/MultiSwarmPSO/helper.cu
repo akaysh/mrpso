@@ -216,6 +216,15 @@ RunConfiguration *LoadRunConfig(char *line)
 	return run;
 }
 
+void GenData(RunConfiguration *run)
+{
+	FreeCPUMemory();
+
+	GenerateMachineList(run->machineFile);
+	GenerateTaskList(run->taskFile);
+	GenerateETCMatrix();
+}
+
 /* RunConfiguration
  *
  * Gets the next run defined in the run file.
