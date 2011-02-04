@@ -11,8 +11,6 @@
 #define C1 2.0f
 #define C2 1.4f
 
-float *GetFCFSMapping(int numTasks, int numMachines);
-
 int TestETCMatrixGeneration();
 int TestFitnessAllDifferentMachines();
 int TestFitnessSameMachines();
@@ -29,6 +27,7 @@ void RunBestUpdateTests();
 void RunSwapTests();
 
 void TestMakespan(char *filename);
+void TestSolutionQuality(char *filename);
 
 void RunGPURandGenTests();
 
