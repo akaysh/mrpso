@@ -114,6 +114,7 @@ void TestSolutionQuality(char *filename)
 
 		for (i = 0; i < 10; i++)
 		{
+			FreeCPUMemory();
 			GenData(run);
 
 			//Run the same test numTests times
@@ -128,21 +129,22 @@ void TestSolutionQuality(char *filename)
 				FreeGPUMemory();
 				ClearTexture();
 
-				psoRet = RunMakespanPSO(run->numParticles, GetNumTasks(), GetNumMachines(), run->w, run->wDecay, run->c1, run->c2, run->numIterations, BASIC);
+				psoRet = RunMakespanPSO(run->numParticles, GetNumTasks(), GetNumMachines(), run->w, run->wDecay, run->c1, run->c2, run->numIterations, DISCRETE);
 
 				fcfsRet = GetFCFSMapping(GetNumTasks(),GetNumMachines());
 
+				mrpsoComp += mrpsoRet[run->numIterations - 1] / fcfsRet;
+				psoComp += psoRet[(run->numIterations - 1) * 2] / fcfsRet;
+
+				free(mrpsoRet);
+				free(psoRet);
 			}
-
-
-
 		}
 
+		printf("%f versus %f\n", mrpsoComp/(run->numTests * 10), psoComp/(run->numTests * 10));
 
+		run = GetNextRun();
 
 	}
-
-
 	fclose(qualFile);
-
 }
