@@ -67,8 +67,8 @@ void InitializeSwarm(Particle *particles, int numParticles, int numTasks, int nu
 		particles[i].positionVector = (float *) malloc(numTasks * sizeof(float));
 		particles[i].velocityVector = (float *) calloc(numTasks, sizeof(float));
 		particles[i].pBestPositionVector = (float *) malloc(numTasks * sizeof(float));
-		particles[i].fitness = 0.0f;
-		particles[i].pBest = 0.0f;
+		particles[i].fitness = 10000000.0f;
+		particles[i].pBest = 100000000.0f;
 
 		//Give the Particle a random starting position in the solution space as well as
 		//a random starting velocity.

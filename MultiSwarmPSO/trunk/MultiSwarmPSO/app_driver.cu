@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cutil.h>
+#include <cutil.h>
+#include <cuda_runtime.h>
+#include <cuda.h>
 #include "helper.h"
 #include "gpu_pso.h"
 #include "cpu_pso.h"
@@ -93,8 +96,6 @@ void TestSolutionQuality(char *filename)
 	int i, j;
 	RunConfiguration *run;
 	FILE *qualFile;
-	float gpuTime, cpuTime;
-	unsigned int timer;
 
 	float *mrpsoRet, *psoRet, fcfsRet;
 
@@ -129,7 +130,7 @@ void TestSolutionQuality(char *filename)
 				FreeGPUMemory();
 				ClearTexture();
 
-				psoRet = RunMakespanPSO(run->numParticles, GetNumTasks(), GetNumMachines(), run->w, run->wDecay, run->c1, run->c2, run->numIterations, DISCRETE);
+				psoRet = RunMakespanPSO(run->numParticles, GetNumTasks(), GetNumMachines(), run->w, run->wDecay, run->c1, run->c2, run->numIterations, BASIC);
 
 				fcfsRet = GetFCFSMapping(GetNumTasks(),GetNumMachines());
 
@@ -141,7 +142,8 @@ void TestSolutionQuality(char *filename)
 			}
 		}
 
-		printf("%f versus %f\n", mrpsoComp/(run->numTests * 10), psoComp/(run->numTests * 10));
+		//printf("%f versus %f\n", mrpsoComp/(run->numTests * 10), psoComp/(run->numTests * 10));
+		printf("%f\n", psoComp/(run->numTests * 10));
 
 		run = GetNextRun();
 

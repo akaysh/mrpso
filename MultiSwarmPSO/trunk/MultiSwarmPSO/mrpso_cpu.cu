@@ -118,6 +118,13 @@ void RunMRPSO(RunConfiguration *run)
 			SwapParticles(particles, run->numParticlesToSwap, run->numSwarms, run->numParticles);
 	}
 
+	for (i = 0; i < run->numSwarms * run->numParticles; i++)
+	{
+		free(particles[i].positionVector);
+		free(particles[i].velocityVector);
+		free(particles[i].pBestPositionVector);
+	}
+
 	free(particles);
 	free(gBest);
 	free(gBestPositionVector);

@@ -18,7 +18,7 @@
 	</Platforms>
 	<ToolFiles>
 		<DefaultToolFile
-			FileName="cuda64.rules"
+			FileName="NvCudaRuntimeApi.v4.0.rules"
 		/>
 	</ToolFiles>
 	<Configurations>
@@ -36,13 +36,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Debug="true"
-				Defines=""
-				Optimization="0"
-				RuntimeChecks="3"
-				Runtime="1"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -119,17 +113,10 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				AdditionalOptions=""
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Debug="true"
-				Arch="20"
-				FastMath="true"
-				ExtraNvccOptions="-Xptxas -v"
-				Keep="false"
-				Optimization="0"
-				RuntimeChecks="3"
-				Runtime="1"
+				Name="Cudart Build Rule"
+				Include="C:\CUDA\SDK\C\common\inc"
+				Arch1="20"
+				Arch2="13"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -207,10 +194,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Defines=""
-				Optimization="2"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -290,10 +274,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Defines=""
-				Optimization="2"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -370,14 +351,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Debug="true"
-				Emulation="true"
-				Defines=""
-				Optimization="0"
-				RuntimeChecks="3"
-				Runtime="1"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -451,14 +425,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Debug="true"
-				Emulation="true"
-				Defines=""
-				Optimization="0"
-				RuntimeChecks="3"
-				Runtime="1"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -530,11 +497,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Emulation="true"
-				Defines=""
-				Optimization="2"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -607,11 +570,7 @@
 				Name="VCCustomBuildTool"
 			/>
 			<Tool
-				Name="CUDA Build Rule"
-				Include="$(CUDA_INC_PATH);$(NVSDKCOMPUTE_ROOT)\C\common\inc"
-				Emulation="true"
-				Defines=""
-				Optimization="2"
+				Name="Cudart Build Rule"
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"

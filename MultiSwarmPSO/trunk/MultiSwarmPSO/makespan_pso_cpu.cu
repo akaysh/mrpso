@@ -20,8 +20,10 @@ float* RunMakespanPSO(int numParticles, int numTasks, int numMachines, float w, 
 	//Now continually iterate until we've reached our maximum quota of iterations...
 	for (i = 0; i < numIterations; i++)
 	{		
-		if (w > 0.4)
+		if (w > 0.01)
 			w *= wDecay;
+		else
+			w = 0.01;
 
 		//Update the velocity and position...
 		switch (vStyle)

@@ -234,18 +234,11 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 		mySwapIndex = (threadID / numTasks) % numToSwap;
 		neighborSwapIndex = neighbor > 0 ? mySwapIndex : (threadID / numTasks) % numToSwap;
 		myDimension = (threadID % numTasks);
-		//printf("thread id %d dimension is %d\n", threadID, myDimension);
-
-		//printf("t %d has myswap %d, neig %d with mySwapIndex of %d\n", threadID, mySwapIndicesBase, neighborSwapIndicesBase, mySwapIndex);
 
 		//Finally let's get our indices!!
 		bestIndex = (mySwarm * numParticles * numTasks) + myDimension * numParticles + bestSwapIndices[mySwapIndicesBase + mySwapIndex];
 		worstIndex = (neighbor * numParticles * numTasks) + myDimension * numParticles + worstSwapIndices[neighborSwapIndicesBase + neighborSwapIndex];
-
-//printf("Thread %d is choosing swaps from %d for best and %d for worst\n", threadID, mySwapIndicesBase + mySwapIndex, neighborSwapIndicesBase + neighborSwapIndex);
-//printf("Thread %d will be taking from %d and putting in %d\n", threadID, bestIndex + myDimension, worstIndex + myDimension);
-
-
+	
 		//Store the best positions temporarily.
 		tempPosition = position[bestIndex];
 		tempVelocity = velocity[bestIndex];
@@ -270,8 +263,6 @@ __global__ void SwapBestParticles(int numSwarms, int numParticles, int numTasks,
 
 			bestIndex = mySwarm * numParticles + bestSwapIndices[mySwarm * numToSwap + mySwapIndex];
 			worstIndex = neighbor * numParticles + worstSwapIndices[neighbor * numToSwap + mySwapIndex];
-
-			//printf("Thread %d choosing from swap index %d for best and %d for worst\n", threadID, mySwarm * numToSwap + mySwapIndex, neighbor * numToSwap + mySwapIndex);
 
 			tempPosition = pBest[bestIndex];
 			pBest[bestIndex] = pBest[worstIndex];
@@ -350,13 +341,8 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
 			sharedIndicesBest[i] = sharedTempIndicesBest[0];
 			sharedIndicesWorst[i] = sharedTempIndicesWorst[0];
 
-					//printf("We found the best %d value for swarm %d as %f at index %d\n", i, blockIdx.x, sharedFitnessBest[0], __float2int_rn(sharedIndicesBest[i]));
-		//printf("We found the worst %d value for swarm %d as %f at index %f\n", i, blockIdx.x, sharedFitnessWorst[0], __float2int_rn(sharedIndicesWorst[i]));
-
 			bestSwapIndices[blockIdx.x * numToSwap + i] = __float2int_rn(sharedIndicesBest[i]);
 			worstSwapIndices[blockIdx.x * numToSwap + i] = __float2int_rn(sharedIndicesWorst[i]);
-
-			//printf("Wrote out best value as %d to index %d\n", bestSwapIndices[blockDim.x * numToSwap + i], blockIdx.x * numToSwap + i);
 		}
 
 		if (threadIdx.x == 0)
@@ -386,7 +372,7 @@ __global__ void GenerateSwapIndices(int numSwarms, int numParticles, int numToSw
  */
 __device__ float ClampVelocity(int numMachines, float velocity)
 {
-	float clamp = 0.4f * numMachines;
+	float clamp = 0.5f * numMachines;
 
 	if (velocity > clamp)
 		velocity = clamp;
@@ -442,13 +428,12 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 	int threadID = __mul24(blockIdx.x, blockDim.x) + threadIdx.x;
 	float newVel;
 	float currPos;
-	//int randOffset;
 	int totalParticles = numSwarms * numParticles;
 	int gBestOffset;
 	int mySwarm;
 	int gNeighborOffset;
 
-	//Each thread is responsible for updating one dimension of one particle's 
+	//Each thread is responsible for updating one dimension of one particle
 	if (threadID < __mul24(totalParticles, numTasks))
 	{
 		//First, figure out what swarm we are covering and who our neighbor is...
@@ -456,18 +441,10 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 
 		gNeighborOffset = mySwarm < numSwarms - 1 ? mySwarm + 1 : 0;
 
-
-		//The last we are covering is the threadID % numTasks
-		//myTask = (threadID / numParticles) % numTasks;
-
-		//Two separate random numbers for every dimension for each particle each iteration.
-		//randOffset = ;
-
 		//The swarm this particle belongs to simply the number of threads handling each swarm (numParticles * numTasks)
 		//divided by this thread's threadID.
 		gBestOffset = (mySwarm * numTasks) + (threadID / numParticles) % numTasks;
 		gNeighborOffset = (gNeighborOffset * numTasks) + (threadID / numParticles) % numTasks;
-		//gBestOffset += myTask;
 
 		currPos = position[threadID];
 		newVel = velocity[threadID];
@@ -475,9 +452,6 @@ __global__ void UpdateVelocityAndPosition(int numSwarms, int numParticles, int n
 		newVel *= args.x;		
 		newVel += args.z * rands[threadID * 2] * (pBestPosition[threadID] - currPos);
 		newVel += args.w * rands[(threadID * 2) + 1] * (gBestPosition[gBestOffset] - currPos);	
-
-		if (mySwarm % 2 == 0)
-			newVel += 0.5f * rands[(threadID * 2) + 1] * FindRepulsiveFactor(gBestPosition[gNeighborOffset], gBestPosition[gBestOffset], position[threadID], numMachines);
 
 		//Write out our velocity
 		newVel = ClampVelocity(numMachines, newVel);
@@ -548,7 +522,7 @@ float *MRPSODriver(RunConfiguration *run)
 	int itersOfRandsLeft;
 	int dRandsOffset;
 	int useSharedMemFitness;
-	unsigned int free, total;
+	//unsigned int free, total;
 
 #ifdef KERNEL_TIMING
 	cudaEvent_t start, stop;
@@ -705,7 +679,7 @@ float *MRPSODriver(RunConfiguration *run)
 	updatePosVelTime += elapsedTime;
 #endif
 
-		if (args.x > 0.001f)
+		if (args.x > 0.4f)
 			args.x *= run->wDecay;
 
 		if (i % run->iterationsBeforeSwap == 0)
