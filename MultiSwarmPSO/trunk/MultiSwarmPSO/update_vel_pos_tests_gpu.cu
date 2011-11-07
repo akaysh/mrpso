@@ -21,10 +21,10 @@ void UpdateVelocityPosition(int numSwarms, int numParticles, int numTasks, int n
 				newVelocity += c1 * ( 1.0f * (pBestPositionVector[i * numParticles * numTasks + k * numParticles + j] - position[i * numParticles * numTasks + k * numParticles + j]) );
 				newVelocity += c2 * ( 1.0f * (gBestPositionVector[(i * numTasks) + k] - position[i * numParticles * numTasks + k * numParticles + j]) );
 	
-				if (newVelocity > numMachines * .5f)
-					newVelocity = numMachines * .5f;
-				else if (newVelocity < numMachines * -0.5f)
-					newVelocity = numMachines * -0.5f;
+				if (newVelocity > numMachines * .4f)
+					newVelocity = numMachines * .4f;
+				else if (newVelocity < numMachines * -0.4f)
+					newVelocity = numMachines * -0.4f;
 
 				velocity[i * numParticles * numTasks + k * numParticles + j] = newVelocity;
 				position[i * numParticles * numTasks + k * numParticles + j] += newVelocity;

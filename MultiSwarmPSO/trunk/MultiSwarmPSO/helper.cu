@@ -91,7 +91,7 @@ void FreeGPUMemory()
 
 void InitRandsGPU()
 {
-	unsigned int free, total;
+	//unsigned int free, total;
 
 	//cuMemGetInfo(&free, &total);
 	//printf("Free: %d, total: %d\n", free, total);
@@ -103,7 +103,7 @@ void InitRandsGPU()
 	//printf("Free: %d, total: %d\n", free, total);
 	curandSetPseudoRandomGeneratorSeed(randGenGPU, (unsigned int) time(NULL));
 	curandGenerateSeeds(randGenGPU);
-	cudaThreadSetLimit(cudaLimitStackSize, 1024);
+	//cudaThreadSetLimit(cudaLimitStackSize, 1024);
 }
 
 void FreeRandsGPU()
@@ -139,7 +139,7 @@ void GenerateRandsGPU(int total, float *deviceMem)
 	curandDestroyGenerator(gen1);
 
 	//Reset the stack size to get our memory back on fermi-based GPUs
-	cudaThreadSetLimit(cudaLimitStackSize, 1024);
+	//cudaThreadSetLimit(cudaLimitStackSize, 1024);
 }
 
 Machine* GenerateMachineList(int numMachines)

@@ -1,7 +1,7 @@
 #ifndef _HELPER_PSO_H_
 #define _HELPER_PSO_H_
 
-#define RECORD_VALUES
+//#define RECORD_VALUES
 
 #define KERNEL_TIMING
 

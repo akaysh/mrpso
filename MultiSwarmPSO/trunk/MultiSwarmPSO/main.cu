@@ -6,25 +6,14 @@
 #include "tests.h"
 
 int main(int argc, char* argv[])
-{
-	//TestGPUMatch();
-
-	//RunGPURandGenTests();
-
-	//printf((cudaGetErrorString(cudaGetLastError())));
-	//InitCUDA();
-	
+{	
 	//RunGPUCorrectnessTests();
 
 	InitCUDA();
 
-	//TestMakespan("runs.txt");
+	TestMakespan("runs.txt");
 
-	TestSolutionQuality("runs.txt");
-
-	
-
-	//getchar();
+	//TestSolutionQuality("runs.txt");
 
 	return 0;
 }
